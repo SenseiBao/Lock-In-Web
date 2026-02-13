@@ -25,6 +25,20 @@ export const useGameLogic = () => {
     const [teamBScore, setTeamBScore] = useState(0);
     const [teamAWords, setTeamAWords] = useState([]);
     const [teamBWords, setTeamBWords] = useState([]);
+    const [diceResult, setDiceResult] = useState(null);
+    const [isRolling, setIsRolling] = useState(false);
+
+    const rollDice = () => {
+        setIsRolling(true);
+        setDiceResult(null); // Clear previous result while rolling
+
+        // Simulate a delay for the animation
+        setTimeout(() => {
+            const roll = Math.floor(Math.random() * 6) + 1;
+            setDiceResult(roll);
+            setIsRolling(false);
+        }, 600); // Matches the animation duration
+    };
 
     const drawCard = useCallback(() => {
         if (deck.length === 0) return "GAME OVER";
@@ -66,6 +80,9 @@ export const useGameLogic = () => {
         teamBWords,
         drawCard,
         recordWin,
-        resetGame
+        resetGame,
+        diceResult,
+        isRolling,
+        rollDice
     };
 };
