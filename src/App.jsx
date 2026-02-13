@@ -58,6 +58,12 @@ function App() {
     const handleDraw = () => {
         playRandomDrawSound();
         setIsFlipped(false);
+
+        // If digital dice is enabled, roll automatically
+        if (useDigitalDice) {
+            rollDice();
+        }
+
         setTimeout(() => {
             drawCard();
             setIsFlipped(true);
