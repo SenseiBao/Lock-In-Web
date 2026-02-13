@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@theme {
+  --color-dark-bg: #0f0f1b;
+  --color-card-gold: #d4af37;
+  --color-point-green: #4ecca3;
+}
+
+body {
+  background-color: var(--color-dark-bg);
+  color: white;
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* 3D Helpers for Tailwind v4 */
+@utility perspective-1000 {
+  perspective: 1000px;
+}
+@utility preserve-3d {
+  transform-style: preserve-3d;
+}
+@utility backface-hidden {
+  backface-visibility: hidden;
+}
+@utility rotate-y-180 {
+  transform: rotateY(180deg);
+}
