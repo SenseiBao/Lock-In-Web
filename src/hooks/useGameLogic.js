@@ -1,4 +1,6 @@
 import { useState, useCallback } from "react";
+import useSound from 'use-sound';
+import powerupSfx from '../assets/sounds/powerup.mp3';
 
 /* -------------------- */
 /* Utility: Shuffle     */
@@ -32,6 +34,15 @@ const INITIAL_WORDS = [
     "GRAND", "HUGE", "LUCKY", "MAGIC", "FAMOUS"
 ];
 
+const POWER_UPS = {
+    1: { name: "Whiteboard Challenge", desc: "Share a whiteboard. Describers take turns drawing one continuous stroke." },
+    2: { name: "Simultaneous Charades", desc: "No talking. Both Describers act out the word at the same time." },
+    3: { name: "Low Bandwidth", desc: "Describers can only use one-syllable words for hints." },
+    4: { name: "Data Corruption", desc: "Forbidden Letters! Roll again: 1=E, 2=T, 3=A, 4=O, 5=I, 6=N." },
+    5: { name: "High Traffic", desc: "Simultaneous Guessing: Both Describers hint and both Guessers shout." },
+    6: { name: "Lookahead", desc: "Both Guessers view 3 random cards. Shuffle, draw new, and re-roll." }
+};
+
 /* -------------------- */
 /* Game Logic Hook      */
 /* -------------------- */
@@ -48,6 +59,8 @@ export const useGameLogic = () => {
 
     const [diceResult, setDiceResult] = useState(null);
     const [isRolling, setIsRolling] = useState(false);
+    const [activePowerUp, setActivePowerUp] = useState(null);
+    const [playPowerUp] = useSound(powerupSfx);
 
     const [phase, setPhase] = useState("idle");
     // idle | drawn | resolved
@@ -56,14 +69,24 @@ export const useGameLogic = () => {
     /* Dice Logic           */
     /* -------------------- */
     const rollDice = () => {
-        if (isRolling) return;
+        if (isRolling) return; // prevent spamming
 
         setIsRolling(true);
-        setDiceResult(null);
+        setActivePowerUp(null); // clear old powerup
 
         setTimeout(() => {
             const roll = Math.floor(Math.random() * 6) + 1;
             setDiceResult(roll);
+
+            // Trigger powerup sound only if this roll is 6
+            if (roll === 6) {
+                if (!activePowerUp) { // only play if no active powerup yet
+                    playPowerUp();
+                }
+                const powerRoll = Math.floor(Math.random() * 6) + 1;
+                setActivePowerUp(POWER_UPS[powerRoll]);
+            }
+
             setIsRolling(false);
         }, 600);
     };
@@ -119,6 +142,7 @@ export const useGameLogic = () => {
         setCurrentWord(null);
         setDiceResult(null);
         setPhase("idle");
+        setActivePowerUp(null);
     };
 
     /* -------------------- */
@@ -139,6 +163,7 @@ export const useGameLogic = () => {
         teamBWords,
         diceResult,
         isRolling,
+        activePowerUp,
         phase,
         winner,
 

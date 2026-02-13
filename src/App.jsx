@@ -24,7 +24,8 @@ function App() {
         recordWin,
         diceResult,
         isRolling,
-        rollDice
+        rollDice,
+        activePowerUp
     } = useGameLogic();
 
     const [isFlipped, setIsFlipped] = useState(false);
@@ -122,9 +123,26 @@ function App() {
 
             {/* PLAY AREA */}
             <div className="flex-1 flex flex-col items-center justify-center gap-6 py-4 z-10">
+
+                {/* DICE SECTION */}
                 {useDigitalDice && (
-                    <Dice value={diceResult} isRolling={isRolling} />
+                    <div className="flex flex-col items-center gap-4">
+                        <Dice value={diceResult} isRolling={isRolling} />
+
+                        {/* POWER-UP TEXT BOX */}
+                        {activePowerUp && !isRolling && (
+                            <div className="max-w-xs bg-pass-orange/20 border-2 border-pass-orange p-4 rounded-xl text-center animate-bounce-short">
+                                <h3 className="text-pass-orange font-black uppercase tracking-tighter text-sm">
+                                    ⚡ {activePowerUp.name}
+                                </h3>
+                                <p className="text-white text-[10px] leading-tight mt-1 font-medium italic">
+                                    {activePowerUp.desc}
+                                </p>
+                            </div>
+                        )}
+                    </div>
                 )}
+
                 <Card word={currentWord} isFlipped={isFlipped} />
             </div>
 
