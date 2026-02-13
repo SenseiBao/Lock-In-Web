@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import cardBackImg from '../assets/images/card_back.jpg'; // Make sure this file exists!
+import cardBackImg from '../assets/images/card_back.jpg';
+import cardFrontImg from '../assets/images/card_front.png';
 
 const Card = ({ word, isFlipped }) => {
     return (
@@ -11,7 +12,6 @@ const Card = ({ word, isFlipped }) => {
             >
                 {/* BACK OF CARD (Visible when isFlipped = false) */}
                 <div className="absolute w-full h-full backface-hidden rounded-2xl shadow-2xl overflow-hidden border-4 border-card-gold bg-dark-bg">
-                    {/* If image fails, it shows the dark background */}
                     <img
                         src={cardBackImg}
                         alt="Card Back"
@@ -20,10 +20,20 @@ const Card = ({ word, isFlipped }) => {
                 </div>
 
                 {/* FRONT OF CARD (Visible when isFlipped = true) */}
-                <div className="absolute w-full h-full backface-hidden bg-card-gold rounded-2xl flex items-center justify-center rotate-y-180 shadow-2xl border-4 border-white/20">
-                    <h2 className="text-dark-bg text-5xl font-black text-center px-4 uppercase drop-shadow-md break-words">
-                        {word || "???"}
-                    </h2>
+                <div className="absolute w-full h-full backface-hidden rounded-2xl flex items-center justify-center rotate-y-180 shadow-2xl border-4 border-white/20 overflow-hidden bg-white">
+                    {/* 1. The Image Background */}
+                    <img
+                        src={cardFrontImg}
+                        alt="Card Front"
+                        className="absolute inset-0 w-full h-full object-cover z-0"
+                    />
+
+                    {/* 2. The Text (Overlay) */}
+                    <div className="relative z-10 w-full">
+                        <h2 className="text-dark-bg text-5xl font-black text-center px-4 uppercase drop-shadow-md break-words">
+                            {word || "???"}
+                        </h2>
+                    </div>
                 </div>
             </motion.div>
         </div>
