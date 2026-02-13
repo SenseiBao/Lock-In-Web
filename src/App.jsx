@@ -43,7 +43,7 @@ function App() {
 
     // YouTube embed URL with autoplay
     const youtubeEmbedUrl = isMusicPlaying
-        ? "https://youtu.be/hyEPwAVCk4k?si=Lr2WgRYHOm2Byt7c"
+        ? "https://www.youtube.com/embed/hyEPwAVCk4k?si=FA2-hDCM3WGI0t2M"
         : "";
 
     // --- LOGIC HELPERS ---
