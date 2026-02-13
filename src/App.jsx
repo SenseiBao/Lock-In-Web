@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import useSound from 'use-sound';
-import ReactPlayer from 'react-player';
 import { useGameLogic } from './hooks/useGameLogic';
 import Card from './components/Card';
 import Dice from './components/Dice';
@@ -31,14 +30,7 @@ function App() {
 
     const [isFlipped, setIsFlipped] = useState(false);
     const [useDigitalDice, setUseDigitalDice] = useState(false);
-
-    // --- MUSIC STATE ---
     const [isMusicPlaying, setIsMusicPlaying] = useState(false);
-    const [playerReady, setPlayerReady] = useState(false);
-    const [needsInteraction, setNeedsInteraction] = useState(true);
-    const playerRef = useRef(null);
-
-    const PLAYLIST_URL = "https://www.youtube.com/watch?v=jfKfPfyJRdk";
 
     // --- SOUND SETUP ---
     const [playDraw1] = useSound(drawSfx1);
@@ -49,20 +41,10 @@ function App() {
     const [playPoint3] = useSound(point3);
     const [playPoint4] = useSound(point4);
 
-    // When music starts playing and player is ready, try to ensure audio works
-    useEffect(() => {
-        if (isMusicPlaying && playerReady && playerRef.current) {
-            // Get the internal player
-            const internalPlayer = playerRef.current.getInternalPlayer();
-            if (internalPlayer && internalPlayer.playVideo) {
-                // Force play (this requires a user gesture, which we have)
-                setTimeout(() => {
-                    internalPlayer.playVideo();
-                    console.log('🔊 Attempting to play with sound');
-                }, 100);
-            }
-        }
-    }, [isMusicPlaying, playerReady]);
+    // YouTube embed URL with autoplay
+    const youtubeEmbedUrl = isMusicPlaying
+        ? "https://youtu.be/hyEPwAVCk4k?si=Lr2WgRYHOm2Byt7c"
+        : "";
 
     // --- LOGIC HELPERS ---
     const playRandomPointSound = () => {
@@ -81,28 +63,8 @@ function App() {
     };
 
     const handleMusicToggle = () => {
-        console.log('Music toggle clicked. Current state:', isMusicPlaying);
-
-        if (!isMusicPlaying) {
-            setNeedsInteraction(false);
-        }
-
-        setIsMusicPlaying(prev => {
-            const newState = !prev;
-
-            // If turning on and player exists, manually trigger play
-            if (newState && playerRef.current) {
-                setTimeout(() => {
-                    const internalPlayer = playerRef.current.getInternalPlayer();
-                    if (internalPlayer && internalPlayer.playVideo) {
-                        internalPlayer.playVideo();
-                        console.log('🎵 Manually triggered playVideo');
-                    }
-                }, 200);
-            }
-
-            return newState;
-        });
+        console.log('Music toggle:', isMusicPlaying, '->', !isMusicPlaying);
+        setIsMusicPlaying(prev => !prev);
     };
 
     const handleDraw = () => {
@@ -165,17 +127,10 @@ function App() {
                 {/* Music Status */}
                 {isMusicPlaying && (
                     <div className="text-xs mb-2">
-                        {!playerReady ? (
-                            <div className="text-gray-400 flex items-center justify-center gap-2">
-                                <div className="w-2 h-2 bg-card-gold rounded-full animate-pulse"></div>
-                                Loading music...
-                            </div>
-                        ) : (
-                            <div className="text-point-green flex items-center justify-center gap-2">
-                                <div className="w-2 h-2 bg-point-green rounded-full animate-pulse"></div>
-                                🎵 Music playing {needsInteraction && '(Click player if no sound)'}
-                            </div>
-                        )}
+                        <div className="text-point-green flex items-center justify-center gap-2">
+                            <div className="w-2 h-2 bg-point-green rounded-full animate-pulse"></div>
+                            🎵 Music player active - Click play button below if needed
+                        </div>
                     </div>
                 )}
 
@@ -258,59 +213,36 @@ function App() {
                 </div>
             </div>
 
-            {/* YOUTUBE MUSIC PLAYER - Now clickable for manual interaction */}
+            {/* YOUTUBE MUSIC PLAYER - Simple iframe approach */}
             {isMusicPlaying && (
                 <div
                     style={{
                         position: 'fixed',
                         bottom: '20px',
                         right: '20px',
-                        width: '320px',
-                        height: '180px',
-                        opacity: 0.3,
-                        border: '2px solid rgba(212, 175, 55, 0.5)',
+                        width: '480px',
+                        height: '270px',
+                        opacity: 0.5,
+                        border: '3px solid rgba(212, 175, 55, 0.8)',
                         borderRadius: '8px',
                         overflow: 'hidden',
                         zIndex: 50,
                         cursor: 'pointer',
-                        transition: 'opacity 0.2s'
+                        transition: 'opacity 0.2s',
+                        backgroundColor: '#000'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.opacity = '0.6'}
-                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0.3'}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0.5'}
                 >
-                    <ReactPlayer
-                        ref={playerRef}
-                        url={PLAYLIST_URL}
-                        playing={isMusicPlaying}
-                        loop={true}
-                        volume={0.25}
-                        width="320px"
-                        height="180px"
-                        onReady={() => {
-                            console.log('✅ Player ready!');
-                            setPlayerReady(true);
-                        }}
-                        onStart={() => {
-                            console.log('▶️ Video started playing');
-                        }}
-                        onPlay={() => {
-                            console.log('▶️ onPlay triggered');
-                        }}
-                        onError={(e) => {
-                            console.error('❌ Player error:', e);
-                        }}
-                        config={{
-                            youtube: {
-                                playerVars: {
-                                    autoplay: 1,
-                                    controls: 1, // Enable controls so user can click play if needed
-                                    modestbranding: 1,
-                                    rel: 0,
-                                    showinfo: 0,
-                                    fs: 0
-                                }
-                            }
-                        }}
+                    <iframe
+                        width="480"
+                        height="270"
+                        src={youtubeEmbedUrl}
+                        title="Background Music"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        style={{ width: '100%', height: '100%' }}
                     />
                 </div>
             )}
