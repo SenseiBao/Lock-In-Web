@@ -31,7 +31,7 @@ const Dice = ({ value, isRolling }) => {
                     animate={{ opacity: 1, y: 0 }}
                     className="text-pass-orange text-xs font-bold uppercase"
                 >
-                    ⚠️ Power-Up! Roll Again
+                    ⚠️ Power-Up!
                 </motion.div>
             )}
         </div>
