@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import useSound from 'use-sound';
+import ReactPlayer from 'react-player';
 import { useGameLogic } from './hooks/useGameLogic';
 import Card from './components/Card';
 import Dice from './components/Dice';
@@ -30,6 +31,11 @@ function App() {
 
     const [isFlipped, setIsFlipped] = useState(false);
     const [useDigitalDice, setUseDigitalDice] = useState(false);
+
+    // --- MUSIC STATE ---
+    const [isMusicPlaying, setIsMusicPlaying] = useState(false); // Default off
+    // Replace this URL with your desired YouTube Playlist or Video
+    const PLAYLIST_URL = "https://youtu.be/fYeja81U228?si=utfvBsiAQPCL8aIb";
 
     // --- SOUND SETUP ---
     const [playDraw1] = useSound(drawSfx1);
@@ -80,21 +86,38 @@ function App() {
     return (
         <div className="min-h-screen flex flex-col items-center p-8 bg-dark-bg font-sans overflow-y-auto">
 
-            {/* HEADER & DICE TOGGLE */}
+            {/* HEADER & CONTROLS */}
             <div className="text-center w-full max-w-4xl mb-6">
                 <h1 className="text-card-gold text-5xl font-black mb-4 tracking-widest drop-shadow-lg">
                     LOCK-IN
                 </h1>
 
-                <div className="flex items-center justify-center gap-3 mb-6">
-                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Physical Dice</span>
-                    <button
-                        onClick={() => setUseDigitalDice(!useDigitalDice)}
-                        className={`w-10 h-5 rounded-full transition-colors relative ${useDigitalDice ? 'bg-point-green' : 'bg-gray-700'}`}
-                    >
-                        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${useDigitalDice ? 'left-5.5' : 'left-0.5'}`} />
-                    </button>
-                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Digital Dice</span>
+                {/* TOGGLES CONTAINER */}
+                <div className="flex flex-col md:flex-row items-center justify-center gap-6 mb-6">
+
+                    {/* Dice Toggle */}
+                    <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Physical Dice</span>
+                        <button
+                            onClick={() => setUseDigitalDice(!useDigitalDice)}
+                            className={`w-10 h-5 rounded-full transition-colors relative ${useDigitalDice ? 'bg-point-green' : 'bg-gray-700'}`}
+                        >
+                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${useDigitalDice ? 'left-5.5' : 'left-0.5'}`} />
+                        </button>
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Digital Dice</span>
+                    </div>
+
+                    {/* Music Toggle */}
+                    <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Music Off</span>
+                        <button
+                            onClick={() => setIsMusicPlaying(!isMusicPlaying)}
+                            className={`w-10 h-5 rounded-full transition-colors relative ${isMusicPlaying ? 'bg-card-gold' : 'bg-gray-700'}`}
+                        >
+                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-fullQP transition-all ${isMusicPlaying ? 'left-5.5' : 'left-0.5'}`} />
+                        </button>
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Music On</span>
+                    </div>
                 </div>
 
                 {/* SCOREBOARD & HISTORY */}
@@ -123,13 +146,10 @@ function App() {
 
             {/* PLAY AREA */}
             <div className="flex-1 flex flex-col items-center justify-center gap-6 py-4 z-10">
-
                 {/* DICE SECTION */}
                 {useDigitalDice && (
                     <div className="flex flex-col items-center gap-4">
                         <Dice value={diceResult} isRolling={isRolling} />
-
-                        {/* POWER-UP TEXT BOX */}
                         {activePowerUp && !isRolling && (
                             <div className="max-w-xs bg-pass-orange/20 border-2 border-pass-orange p-4 rounded-xl text-center animate-bounce-short">
                                 <h3 className="text-pass-orange font-black uppercase tracking-tighter text-sm">
@@ -142,7 +162,6 @@ function App() {
                         )}
                     </div>
                 )}
-
                 <Card word={currentWord} isFlipped={isFlipped} />
             </div>
 
@@ -179,6 +198,41 @@ function App() {
                         TEAM B +1
                     </button>
                 </div>
+            </div>
+
+            {/* HIDDEN MUSIC PLAYER */}
+            <div
+                style={{
+                    position: 'absolute',
+                    width: '1px',
+                    height: '1px',
+                    padding: '0',
+                    margin: '-1px',
+                    overflow: 'hidden',
+                    clip: 'rect(0, 0, 0, 0)',
+                    border: '0'
+                }}
+            >
+                <ReactPlayer
+                    url={PLAYLIST_URL}
+                    playing={isMusicPlaying}
+                    loop={true}
+                    volume={0.3}
+                    width="64px" // Give it a small non-zero size
+                    height="64px"
+                    config={{
+                        youtube: {
+                            playerVars: {
+                                autoplay: 1,
+                                controls: 0,
+                                origin: window.location.origin
+                            }
+                        }
+                    }}
+                    onReady={() => console.log("Player is ready")}
+                    onStart={() => console.log("Playback started")}
+                    onError={(e) => console.error("Player Error:", e)}
+                />
             </div>
         </div>
     );
