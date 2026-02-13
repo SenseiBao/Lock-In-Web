@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import useSound from 'use-sound';
 import ReactPlayer from 'react-player';
 import { useGameLogic } from './hooks/useGameLogic';
@@ -35,10 +35,10 @@ function App() {
     // --- MUSIC STATE ---
     const [isMusicPlaying, setIsMusicPlaying] = useState(false);
     const [playerReady, setPlayerReady] = useState(false);
-    const [audioUnlocked, setAudioUnlocked] = useState(false);
+    const [needsInteraction, setNeedsInteraction] = useState(true);
+    const playerRef = useRef(null);
 
-    // Use a YouTube live stream or lofi channel (more reliable)
-    const PLAYLIST_URL = "https://www.youtube.com/watch?v=jfKfPfyJRdk"; // lofi hip hop radio
+    const PLAYLIST_URL = "https://www.youtube.com/watch?v=jfKfPfyJRdk";
 
     // --- SOUND SETUP ---
     const [playDraw1] = useSound(drawSfx1);
@@ -49,22 +49,20 @@ function App() {
     const [playPoint3] = useSound(point3);
     const [playPoint4] = useSound(point4);
 
-    // --- AUDIO UNLOCKER ---
-    const unlockAudio = () => {
-        if (audioUnlocked) return;
-
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (AudioContext) {
-            const ctx = new AudioContext();
-            if (ctx.state === 'suspended') {
-                ctx.resume().then(() => {
-                    setAudioUnlocked(true);
-                });
-            } else {
-                setAudioUnlocked(true);
+    // When music starts playing and player is ready, try to ensure audio works
+    useEffect(() => {
+        if (isMusicPlaying && playerReady && playerRef.current) {
+            // Get the internal player
+            const internalPlayer = playerRef.current.getInternalPlayer();
+            if (internalPlayer && internalPlayer.playVideo) {
+                // Force play (this requires a user gesture, which we have)
+                setTimeout(() => {
+                    internalPlayer.playVideo();
+                    console.log('🔊 Attempting to play with sound');
+                }, 100);
             }
         }
-    };
+    }, [isMusicPlaying, playerReady]);
 
     // --- LOGIC HELPERS ---
     const playRandomPointSound = () => {
@@ -83,12 +81,31 @@ function App() {
     };
 
     const handleMusicToggle = () => {
-        unlockAudio();
-        setIsMusicPlaying(prev => !prev);
+        console.log('Music toggle clicked. Current state:', isMusicPlaying);
+
+        if (!isMusicPlaying) {
+            setNeedsInteraction(false);
+        }
+
+        setIsMusicPlaying(prev => {
+            const newState = !prev;
+
+            // If turning on and player exists, manually trigger play
+            if (newState && playerRef.current) {
+                setTimeout(() => {
+                    const internalPlayer = playerRef.current.getInternalPlayer();
+                    if (internalPlayer && internalPlayer.playVideo) {
+                        internalPlayer.playVideo();
+                        console.log('🎵 Manually triggered playVideo');
+                    }
+                }, 200);
+            }
+
+            return newState;
+        });
     };
 
     const handleDraw = () => {
-        unlockAudio();
         playRandomDrawSound();
         setIsFlipped(false);
 
@@ -103,7 +120,6 @@ function App() {
     };
 
     const handleWin = (isTeamA) => {
-        unlockAudio();
         playRandomPointSound();
         recordWin(isTeamA);
         setIsFlipped(false);
@@ -146,10 +162,20 @@ function App() {
                     </div>
                 </div>
 
-                {/* Audio Status Indicator */}
-                {isMusicPlaying && !playerReady && (
-                    <div className="text-xs text-gray-500 mb-2">
-                        Loading music...
+                {/* Music Status */}
+                {isMusicPlaying && (
+                    <div className="text-xs mb-2">
+                        {!playerReady ? (
+                            <div className="text-gray-400 flex items-center justify-center gap-2">
+                                <div className="w-2 h-2 bg-card-gold rounded-full animate-pulse"></div>
+                                Loading music...
+                            </div>
+                        ) : (
+                            <div className="text-point-green flex items-center justify-center gap-2">
+                                <div className="w-2 h-2 bg-point-green rounded-full animate-pulse"></div>
+                                🎵 Music playing {needsInteraction && '(Click player if no sound)'}
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -232,32 +258,62 @@ function App() {
                 </div>
             </div>
 
-            {/* MUSIC PLAYER */}
-            <div style={{ position: 'fixed', bottom: -1000, left: -1000 }}>
-                <ReactPlayer
-                    url={PLAYLIST_URL}
-                    playing={isMusicPlaying}
-                    loop={true}
-                    volume={0.3}
-                    muted={false}
-                    width="0"
-                    height="0"
-                    onReady={() => setPlayerReady(true)}
-                    onError={(e) => console.log('Player error:', e)}
-                    config={{
-                        youtube: {
-                            playerVars: {
-                                autoplay: 1,
-                                controls: 0,
-                                disablekb: 1,
-                                fs: 0,
-                                modestbranding: 1,
-                                playsinline: 1
-                            }
-                        }
+            {/* YOUTUBE MUSIC PLAYER - Now clickable for manual interaction */}
+            {isMusicPlaying && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        bottom: '20px',
+                        right: '20px',
+                        width: '320px',
+                        height: '180px',
+                        opacity: 0.3,
+                        border: '2px solid rgba(212, 175, 55, 0.5)',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        zIndex: 50,
+                        cursor: 'pointer',
+                        transition: 'opacity 0.2s'
                     }}
-                />
-            </div>
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = '0.6'}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0.3'}
+                >
+                    <ReactPlayer
+                        ref={playerRef}
+                        url={PLAYLIST_URL}
+                        playing={isMusicPlaying}
+                        loop={true}
+                        volume={0.25}
+                        width="320px"
+                        height="180px"
+                        onReady={() => {
+                            console.log('✅ Player ready!');
+                            setPlayerReady(true);
+                        }}
+                        onStart={() => {
+                            console.log('▶️ Video started playing');
+                        }}
+                        onPlay={() => {
+                            console.log('▶️ onPlay triggered');
+                        }}
+                        onError={(e) => {
+                            console.error('❌ Player error:', e);
+                        }}
+                        config={{
+                            youtube: {
+                                playerVars: {
+                                    autoplay: 1,
+                                    controls: 1, // Enable controls so user can click play if needed
+                                    modestbranding: 1,
+                                    rel: 0,
+                                    showinfo: 0,
+                                    fs: 0
+                                }
+                            }
+                        }}
+                    />
+                </div>
+            )}
         </div>
     );
 }
