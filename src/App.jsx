@@ -3,12 +3,17 @@ import useSound from 'use-sound';
 import { useGameLogic } from './hooks/useGameLogic';
 import Card from './components/Card';
 
-// Assets
-import drawSfx from './assets/sounds/draw.wav';
-import pointSfx from './assets/sounds/point.mp3';
+// --- ASSETS ---
+// 1. Import ALL the sounds
+import drawSfx1 from './assets/sounds/draw.wav';
+import drawSfx2 from './assets/sounds/draw2.wav';
+
+import pointMain from './assets/sounds/point.mp3';
+import point2 from './assets/sounds/point2.mp3';
+import point3 from './assets/sounds/point3.mp3';
+import point4 from './assets/sounds/point4.mp3';
 
 function App() {
-    // 1. Destructure the word lists here
     const {
         currentWord,
         teamAScore,
@@ -21,11 +26,37 @@ function App() {
 
     const [isFlipped, setIsFlipped] = useState(false);
 
-    const [playDraw] = useSound(drawSfx);
-    const [playPoint] = useSound(pointSfx);
+    // --- SOUND SETUP ---
+    const [playDraw1] = useSound(drawSfx1);
+    const [playDraw2] = useSound(drawSfx2);
 
+    // Load all point sounds
+    const [playPointMain] = useSound(pointMain);
+    const [playPoint2] = useSound(point2);
+    const [playPoint3] = useSound(point3);
+    const [playPoint4] = useSound(point4);
+
+    // --- SOUND LOGIC (The 80/20 Rule) ---
+    const playRandomPointSound = () => {
+        const chance = Math.random();
+        if (chance < 0.8) {
+            playPointMain(); // 80% chance
+        } else {
+            // 20% chance: Pick one of the rare sounds
+            const rareSounds = [playPoint2, playPoint3, playPoint4];
+            const randomRare = rareSounds[Math.floor(Math.random() * rareSounds.length)];
+            randomRare();
+        }
+    };
+
+    const playRandomDrawSound = () => {
+        // 50/50 chance for draw sounds
+        Math.random() > 0.5 ? playDraw1() : playDraw2();
+    };
+
+    // --- HANDLERS ---
     const handleDraw = () => {
-        playDraw();
+        playRandomDrawSound();
         setIsFlipped(false);
         setTimeout(() => {
             drawCard();
@@ -34,7 +65,7 @@ function App() {
     };
 
     const handleWin = (isTeamA) => {
-        playPoint();
+        playRandomPointSound();
         recordWin(isTeamA);
         setIsFlipped(false);
     };
@@ -49,25 +80,23 @@ function App() {
                 </h1>
 
                 <div className="flex justify-between items-start gap-4">
-                    {/* Team A History Column */}
+                    {/* Team A History */}
                     <div className="flex-1 flex flex-col gap-2">
                         <div className="bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-sm text-center">
                             <p className="text-gray-400 text-sm font-bold tracking-wider mb-1">TEAM A</p>
                             <p className="text-point-green text-4xl font-black">{teamAScore}</p>
                         </div>
-                        {/* Word History List */}
                         <div className="flex flex-col-reverse gap-1 text-xs text-gray-400 font-mono text-center opacity-70">
                             {teamAWords.map((w, i) => <span key={i}>{w}</span>)}
                         </div>
                     </div>
 
-                    {/* Team B History Column */}
+                    {/* Team B History */}
                     <div className="flex-1 flex flex-col gap-2">
                         <div className="bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-sm text-center">
                             <p className="text-gray-400 text-sm font-bold tracking-wider mb-1">TEAM B</p>
                             <p className="text-point-green text-4xl font-black">{teamBScore}</p>
                         </div>
-                        {/* Word History List */}
                         <div className="flex flex-col-reverse gap-1 text-xs text-gray-400 font-mono text-center opacity-70">
                             {teamBWords.map((w, i) => <span key={i}>{w}</span>)}
                         </div>
