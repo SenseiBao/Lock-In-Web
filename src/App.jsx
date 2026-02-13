@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useSound from 'use-sound';
 import ReactPlayer from 'react-player';
 import { useGameLogic } from './hooks/useGameLogic';
@@ -33,9 +33,12 @@ function App() {
     const [useDigitalDice, setUseDigitalDice] = useState(false);
 
     // --- MUSIC STATE ---
-    const [isMusicPlaying, setIsMusicPlaying] = useState(false); // Default off
-    // Replace this URL with your desired YouTube Playlist or Video
-    const PLAYLIST_URL = "https://youtu.be/fYeja81U228?si=utfvBsiAQPCL8aIb";
+    const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+    const [playerReady, setPlayerReady] = useState(false);
+    const [audioUnlocked, setAudioUnlocked] = useState(false);
+
+    // Use a YouTube live stream or lofi channel (more reliable)
+    const PLAYLIST_URL = "https://www.youtube.com/watch?v=jfKfPfyJRdk"; // lofi hip hop radio
 
     // --- SOUND SETUP ---
     const [playDraw1] = useSound(drawSfx1);
@@ -45,6 +48,23 @@ function App() {
     const [playPoint2] = useSound(point2);
     const [playPoint3] = useSound(point3);
     const [playPoint4] = useSound(point4);
+
+    // --- AUDIO UNLOCKER ---
+    const unlockAudio = () => {
+        if (audioUnlocked) return;
+
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) {
+            const ctx = new AudioContext();
+            if (ctx.state === 'suspended') {
+                ctx.resume().then(() => {
+                    setAudioUnlocked(true);
+                });
+            } else {
+                setAudioUnlocked(true);
+            }
+        }
+    };
 
     // --- LOGIC HELPERS ---
     const playRandomPointSound = () => {
@@ -62,11 +82,16 @@ function App() {
         Math.random() > 0.5 ? playDraw1() : playDraw2();
     };
 
+    const handleMusicToggle = () => {
+        unlockAudio();
+        setIsMusicPlaying(prev => !prev);
+    };
+
     const handleDraw = () => {
+        unlockAudio();
         playRandomDrawSound();
         setIsFlipped(false);
 
-        // If digital dice is enabled, roll automatically
         if (useDigitalDice) {
             rollDice();
         }
@@ -78,6 +103,7 @@ function App() {
     };
 
     const handleWin = (isTeamA) => {
+        unlockAudio();
         playRandomPointSound();
         recordWin(isTeamA);
         setIsFlipped(false);
@@ -111,14 +137,21 @@ function App() {
                     <div className="flex items-center gap-3">
                         <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Music Off</span>
                         <button
-                            onClick={() => setIsMusicPlaying(!isMusicPlaying)}
+                            onClick={handleMusicToggle}
                             className={`w-10 h-5 rounded-full transition-colors relative ${isMusicPlaying ? 'bg-card-gold' : 'bg-gray-700'}`}
                         >
-                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-fullQP transition-all ${isMusicPlaying ? 'left-5.5' : 'left-0.5'}`} />
+                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${isMusicPlaying ? 'left-5.5' : 'left-0.5'}`} />
                         </button>
                         <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Music On</span>
                     </div>
                 </div>
+
+                {/* Audio Status Indicator */}
+                {isMusicPlaying && !playerReady && (
+                    <div className="text-xs text-gray-500 mb-2">
+                        Loading music...
+                    </div>
+                )}
 
                 {/* SCOREBOARD & HISTORY */}
                 <div className="flex justify-between items-start gap-4">
@@ -146,7 +179,6 @@ function App() {
 
             {/* PLAY AREA */}
             <div className="flex-1 flex flex-col items-center justify-center gap-6 py-4 z-10">
-                {/* DICE SECTION */}
                 {useDigitalDice && (
                     <div className="flex flex-col items-center gap-4">
                         <Dice value={diceResult} isRolling={isRolling} />
@@ -200,38 +232,30 @@ function App() {
                 </div>
             </div>
 
-            {/* HIDDEN MUSIC PLAYER */}
-            <div
-                style={{
-                    position: 'absolute',
-                    width: '1px',
-                    height: '1px',
-                    padding: '0',
-                    margin: '-1px',
-                    overflow: 'hidden',
-                    clip: 'rect(0, 0, 0, 0)',
-                    border: '0'
-                }}
-            >
+            {/* MUSIC PLAYER */}
+            <div style={{ position: 'fixed', bottom: -1000, left: -1000 }}>
                 <ReactPlayer
                     url={PLAYLIST_URL}
                     playing={isMusicPlaying}
                     loop={true}
                     volume={0.3}
-                    width="64px" // Give it a small non-zero size
-                    height="64px"
+                    muted={false}
+                    width="0"
+                    height="0"
+                    onReady={() => setPlayerReady(true)}
+                    onError={(e) => console.log('Player error:', e)}
                     config={{
                         youtube: {
                             playerVars: {
                                 autoplay: 1,
                                 controls: 0,
-                                origin: window.location.origin
+                                disablekb: 1,
+                                fs: 0,
+                                modestbranding: 1,
+                                playsinline: 1
                             }
                         }
                     }}
-                    onReady={() => console.log("Player is ready")}
-                    onStart={() => console.log("Playback started")}
-                    onError={(e) => console.error("Player Error:", e)}
                 />
             </div>
         </div>
