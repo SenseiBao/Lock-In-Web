@@ -1,8 +1,8 @@
 # React + Vite
 
-This is a work in progress card game called lock-in, specifically the website version.
-There is also a Java version that was developed before this
-Physical editions may be made later.
+This is a work in progress card game called lock-in, specifically the website version.  
+There is also a Java version that was developed before this.  
+Physical editions may be made later.  
 Currently deployed using Varcel: https://lock-in-web-kappa.vercel.app/
 # Lock-In (Web Version)
 
