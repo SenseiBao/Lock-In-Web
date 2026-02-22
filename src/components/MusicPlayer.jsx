@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { Howl } from 'howler';
 
 const tracks = [
+    { name: "George Benson - Nothing Gonna Change My Love For You", url: "https://res.cloudinary.com/dhknbfdat/video/upload/v1771755064/George_Benson_-_Nothing_s_Gonna_Change_My_Love_For_You_Lyrics_mdaykg.mp3"},
+    { name: "아른(Arn)-think of you", url: "https://res.cloudinary.com/dhknbfdat/video/upload/v1771753793/%EC%95%84%EB%A5%B8_Arn_-think_of_you_Official_Lyric_Video_etzgy3.mp3" },
     { name: "Dededes Royal Payback Kirby Triple Deluxe", url: "https://res.cloudinary.com/dhknbfdat/video/upload/v1771753150/Dededes_Royal_Payback_Kirby_Triple_Deluxe_yek51w.mp3" },
     { name: "Zombotany - Modern Day - PvZ2", url: "https://res.cloudinary.com/dhknbfdat/video/upload/v1771753175/Zombotany_-_Modern_Day_-_Plants_vs._Zombies_2_Fanmade_Music_kbyy7p.mp3" },
-    { name: "아른(Arn)-think of you", url: "https://res.cloudinary.com/dhknbfdat/video/upload/v1771753793/%EC%95%84%EB%A5%B8_Arn_-think_of_you_Official_Lyric_Video_etzgy3.mp3" },
-    { name: "George Benson - Nothing Gonna Change My Love For You", url: "https://res.cloudinary.com/dhknbfdat/video/upload/v1771755064/George_Benson_-_Nothing_s_Gonna_Change_My_Love_For_You_Lyrics_mdaykg.mp3"},
+    { name: "Hanatan - Romeo and Cinderella", url: "https://res.cloudinary.com/dhknbfdat/video/upload/v1771757511/Hanatan_-_Romeo_and_Cinderella_pwhsa7.mp3"},
 ];
 
 export default function MusicPlayer({ isMusicPlaying }) {
@@ -17,15 +18,28 @@ export default function MusicPlayer({ isMusicPlaying }) {
     const [showTrackList, setShowTrackList] = useState(false);
     const [isShuffleOn, setIsShuffleOn] = useState(true);
 
-    // REFS: These stop Howler from using "stale" data
+    // NEW: Volume state (defaulting to 25%)
+    const [volume, setVolume] = useState(0.25);
+
+    // REFS
     const isShuffleRef = useRef(isShuffleOn);
     const currentTrackIndexRef = useRef(currentTrackIndex);
     const playedTracksRef = useRef(playedTracks);
+    const volumeRef = useRef(volume); // Keep track of latest volume for Howler
 
     useEffect(() => { isShuffleRef.current = isShuffleOn; }, [isShuffleOn]);
     useEffect(() => { currentTrackIndexRef.current = currentTrackIndex; }, [currentTrackIndex]);
     useEffect(() => { playedTracksRef.current = playedTracks; }, [playedTracks]);
+    useEffect(() => { volumeRef.current = volume; }, [volume]);
 
+    // Live Volume Updater
+    useEffect(() => {
+        if (bgMusic) {
+            bgMusic.volume(volume);
+        }
+    }, [volume, bgMusic]);
+
+    // Progress Bar Updater
     useEffect(() => {
         let interval;
         if (bgMusic && isMusicPlaying) {
@@ -34,19 +48,26 @@ export default function MusicPlayer({ isMusicPlaying }) {
         return () => clearInterval(interval);
     }, [bgMusic, isMusicPlaying]);
 
-    // Remote control from App.jsx
+    // Play/Pause Remote Control
     useEffect(() => {
         if (!bgMusic) return;
-        if (isMusicPlaying && !bgMusic.playing()) {
-            bgMusic.play();
-            bgMusic.fade(0, 0.25, 300);
-        } else if (!isMusicPlaying && bgMusic.playing()) {
-            bgMusic.fade(0.25, 0, 300);
-            setTimeout(() => bgMusic.pause(), 300);
+
+        let timer;
+        if (isMusicPlaying) {
+            bgMusic.volume(volumeRef.current);
+            if (!bgMusic.playing()) {
+                bgMusic.play();
+            }
+        } else {
+            bgMusic.fade(volumeRef.current, 0, 300);
+            timer = setTimeout(() => {
+                bgMusic.pause();
+            }, 300);
         }
+
+        return () => clearTimeout(timer);
     }, [isMusicPlaying, bgMusic]);
 
-    // Centralized track calculation using Refs
     const advanceTrack = () => {
         const currentIndex = currentTrackIndexRef.current;
         const history = playedTracksRef.current;
@@ -83,24 +104,25 @@ export default function MusicPlayer({ isMusicPlaying }) {
 
         const sound = new Howl({
             src: [tracks[currentTrackIndex].url],
-            loop: false, volume: 0.25, html5: true,
+            loop: false,
+            volume: volumeRef.current, // Use dynamic volume instead of hardcoded 0.25
+            html5: true,
             onload: () => setDuration(sound.duration()),
-            onend: advanceTrack // Clean reference to our function
+            onend: advanceTrack
         });
 
         setBgMusic(sound);
-        if (isMusicPlaying) { sound.play(); sound.fade(0, 0.25, 300); }
+        if (isMusicPlaying) {
+            sound.play();
+            sound.fade(0, volumeRef.current, 300);
+        }
         return () => sound.unload();
     }, [currentTrackIndex]);
 
     const handleToggleShuffle = () => {
         const turningOn = !isShuffleOn;
         setIsShuffleOn(turningOn);
-
-        // Instantly switch to a random track if they turn shuffle ON
-        if (turningOn) {
-            advanceTrack();
-        }
+        if (turningOn) advanceTrack();
     };
 
     const handlePrevTrack = () => {
@@ -129,17 +151,17 @@ export default function MusicPlayer({ isMusicPlaying }) {
         <div className="flex flex-col items-center w-full">
             {isMusicPlaying && (
                 <div className="w-full max-w-md mx-auto mb-4 bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
-                    <div className="flex items-center justify-between gap-3 mb-3">
+                    {/* Top Controls */}
+                    <div className="flex items-center justify-between gap-3 mb-4">
                         <button onClick={handleToggleShuffle} className={`transition-colors text-xl px-2 hover:scale-110 active:scale-95 ${isShuffleOn ? 'text-card-gold' : 'text-gray-600 hover:text-gray-400'}`} title="Toggle Shuffle">🔀</button>
                         <button onClick={handlePrevTrack} className="text-white hover:text-card-gold transition-colors text-xl px-2 hover:scale-110 active:scale-95">⏮️</button>
+
                         <div className="flex-1 text-center">
-                            {/* Song Title */}
                             <div className="text-xs text-point-green flex items-center justify-center gap-2">
                                 <div className="w-2 h-2 bg-point-green rounded-full animate-pulse"></div>
                                 <span className="font-medium">🎵 {tracks[currentTrackIndex].name}</span>
                             </div>
 
-                            {/* Shuffle Indicator */}
                             {isShuffleOn && (
                                 <div className="flex items-center justify-center gap-1 mt-1">
                                     <div className="w-1.5 h-1.5 bg-card-gold rounded-full animate-pulse"></div>
@@ -147,24 +169,48 @@ export default function MusicPlayer({ isMusicPlaying }) {
                                 </div>
                             )}
                         </div>
+
                         <button onClick={advanceTrack} className="text-white hover:text-card-gold transition-colors text-xl px-2 hover:scale-110 active:scale-95">⏭️</button>
                         <div className="w-[36px]"></div>
                     </div>
 
-                    <div className="space-y-1">
-                        <input type="range" min="0" max={duration || 0} value={currentTime} onChange={handleSeek}
-                               className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-                               style={{ background: `linear-gradient(to right, #10b981 0%, #10b981 ${(currentTime / duration) * 100}%, #374151 ${(currentTime / duration) * 100}%, #374151 100%)` }}
-                        />
-                        <div className="flex justify-between text-[10px] text-gray-500 font-mono">
-                            <span>{formatTime(currentTime)}</span><span>{formatTime(duration)}</span>
+                    {/* Progress Bar & Volume Container */}
+                    <div className="bg-dark-bg/30 p-3 rounded-lg space-y-3 border border-white/5">
+
+                        {/* Time Progress */}
+                        <div className="space-y-1">
+                            <input type="range" min="0" max={duration || 0} value={currentTime} onChange={handleSeek}
+                                   className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                                   style={{ background: `linear-gradient(to right, #10b981 0%, #10b981 ${(currentTime / duration) * 100}%, #374151 ${(currentTime / duration) * 100}%, #374151 100%)` }}
+                            />
+                            <div className="flex justify-between text-[10px] text-gray-400 font-mono">
+                                <span>{formatTime(currentTime)}</span><span>{formatTime(duration)}</span>
+                            </div>
+                        </div>
+
+                        {/* Volume Slider */}
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs opacity-70">🔈</span>
+                            <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.01"
+                                value={volume}
+                                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                                className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                                style={{ background: `linear-gradient(to right, #d4af37 0%, #d4af37 ${volume * 100}%, #374151 ${volume * 100}%, #374151 100%)` }}
+                            />
+                            <span className="text-xs opacity-70">🔊</span>
                         </div>
                     </div>
 
+                    {/* Track List Toggle */}
                     <button onClick={() => setShowTrackList(!showTrackList)} className="w-full mt-3 text-xs text-gray-400 hover:text-card-gold transition-colors font-medium uppercase tracking-wider">
                         {showTrackList ? '▲ Hide Tracks' : '▼ View All Tracks'}
                     </button>
 
+                    {/* Track List */}
                     {showTrackList && (
                         <div className="mt-3 space-y-1 max-h-48 overflow-y-auto">
                             {tracks.map((track, index) => (
