@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import useSound from 'use-sound';
+import { Howl } from 'howler';
 import { useGameLogic } from './hooks/useGameLogic';
 import Card from './components/Card';
 import Dice from './components/Dice';
@@ -31,6 +32,40 @@ function App() {
     const [isFlipped, setIsFlipped] = useState(false);
     const [useDigitalDice, setUseDigitalDice] = useState(false);
     const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+    const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+    const [bgMusic, setBgMusic] = useState(null);
+    const [playedTracks, setPlayedTracks] = useState([0]);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [showTrackList, setShowTrackList] = useState(false);
+    //shuffle
+    const [isShuffleOn, setIsShuffleOn] = useState(true); // Defaulting to your existing behavior
+    const isShuffleRef = useRef(isShuffleOn);
+
+    // Keep the ref in sync with state so Howler can always read the latest value
+    useEffect(() => {
+        isShuffleRef.current = isShuffleOn;
+    }, [isShuffleOn]);
+    
+    // Timer states
+    const [timerSeconds, setTimerSeconds] = useState(30);
+    const [isTimerRunning, setIsTimerRunning] = useState(false);
+
+    // --- MULTIPLE TRACKS SETUP ---
+    const tracks = [
+        {
+            name: "Dededes Royal Payback Kirby Triple Deluxe",
+            url: "https://res.cloudinary.com/dhknbfdat/video/upload/v1771753150/Dededes_Royal_Payback_Kirby_Triple_Deluxe_yek51w.mp3"
+        },
+        {
+            name: "Zombotany - Modern Day - PvZ2",
+            url: "https://res.cloudinary.com/dhknbfdat/video/upload/v1771753175/Zombotany_-_Modern_Day_-_Plants_vs._Zombies_2_Fanmade_Music_kbyy7p.mp3"
+        },
+        {
+            name: "아른(Arn)-think of you (Official Lyric Video)",
+            url: "https://res.cloudinary.com/dhknbfdat/video/upload/v1771753793/%EC%95%84%EB%A5%B8_Arn_-think_of_you_Official_Lyric_Video_etzgy3.mp3"
+        },
+    ];
 
     // --- SOUND SETUP ---
     const [playDraw1] = useSound(drawSfx1);
@@ -41,10 +76,112 @@ function App() {
     const [playPoint3] = useSound(point3);
     const [playPoint4] = useSound(point4);
 
-    // YouTube embed URL with autoplay
-    const youtubeEmbedUrl = isMusicPlaying
-        ? "https://www.youtube.com/embed/hyEPwAVCk4k?si=FA2-hDCM3WGI0t2M"
-        : "";
+    // Update progress bar
+    useEffect(() => {
+        let interval;
+        if (bgMusic && isMusicPlaying) {
+            interval = setInterval(() => {
+                const seek = bgMusic.seek();
+                setCurrentTime(seek);
+            }, 100);
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [bgMusic, isMusicPlaying]);
+
+    // Timer countdown
+    useEffect(() => {
+        let interval;
+        if (isTimerRunning && timerSeconds > 0) {
+            interval = setInterval(() => {
+                setTimerSeconds(prev => {
+                    if (prev <= 1) {
+                        setIsTimerRunning(false);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [isTimerRunning, timerSeconds]);
+
+    // Get random track index (avoiding the current one)
+    const getRandomTrackIndex = () => {
+        if (!isShuffleRef.current) {
+            return (currentTrackIndex + 1) % tracks.length;
+        }
+
+        // If shuffle is ON, use your existing random logic
+        if (tracks.length === 1) return 0;
+
+        let currentPlayed = [...playedTracks];
+        if (currentPlayed.length > tracks.length / 2) {
+            currentPlayed = [currentTrackIndex];
+            setPlayedTracks(currentPlayed);
+        }
+
+        const availableTracks = tracks
+            .map((_, index) => index)
+            .filter(index => !currentPlayed.includes(index));
+
+        if (availableTracks.length === 0) {
+            const newIndex = Math.floor(Math.random() * tracks.length);
+            return newIndex === currentTrackIndex
+                ? (newIndex + 1) % tracks.length
+                : newIndex;
+        }
+
+        return availableTracks[Math.floor(Math.random() * availableTracks.length)];
+    };
+
+    // Initialize music player when track changes
+    useEffect(() => {
+        if (bgMusic) {
+            bgMusic.unload();
+        }
+
+        const sound = new Howl({
+            src: [tracks[currentTrackIndex].url],
+            loop: false,
+            volume: 0.25,
+            html5: true,
+            onload: () => {
+                console.log(`🎵 Loaded: ${tracks[currentTrackIndex].name}`);
+                setDuration(sound.duration());
+            },
+            onloaderror: (id, error) => console.error('❌ Music load error:', error),
+            onplayerror: (id, error) => console.error('❌ Music play error:', error),
+            onend: () => {
+                const nextIndex = getRandomTrackIndex();
+                setCurrentTrackIndex(nextIndex);
+                setPlayedTracks(prev => [...prev, nextIndex]);
+            }
+        });
+
+        setBgMusic(sound);
+
+        if (isMusicPlaying) {
+            sound.play();
+            sound.fade(0, 0.25, 300);
+        }
+
+        return () => {
+            sound.unload();
+        };
+    }, [currentTrackIndex]);
+
+    // Cleanup on component unmount
+    useEffect(() => {
+        return () => {
+            if (bgMusic) {
+                bgMusic.unload();
+            }
+        };
+    }, []);
 
     // --- LOGIC HELPERS ---
     const playRandomPointSound = () => {
@@ -63,8 +200,61 @@ function App() {
     };
 
     const handleMusicToggle = () => {
-        console.log('Music toggle:', isMusicPlaying, '->', !isMusicPlaying);
-        setIsMusicPlaying(prev => !prev);
+        if (!bgMusic) return;
+        
+        if (isMusicPlaying) {
+            bgMusic.fade(0.25, 0, 300);
+            setTimeout(() => bgMusic.pause(), 300);
+        } else {
+            bgMusic.play();
+            bgMusic.fade(0, 0.25, 300);
+        }
+        setIsMusicPlaying(!isMusicPlaying);
+    };
+
+    const handleNextTrack = () => {
+        const nextIndex = getRandomTrackIndex();
+        setCurrentTrackIndex(nextIndex);
+        setPlayedTracks(prev => [...prev, nextIndex]);
+    };
+
+    const handlePrevTrack = () => {
+        if (playedTracks.length > 1) {
+            const prevIndex = playedTracks[playedTracks.length - 2];
+            setPlayedTracks(prev => prev.slice(0, -1));
+            setCurrentTrackIndex(prevIndex);
+        } else {
+            handleNextTrack();
+        }
+    };
+
+    const handleSeek = (e) => {
+        if (!bgMusic) return;
+        const seekTime = parseFloat(e.target.value);
+        bgMusic.seek(seekTime);
+        setCurrentTime(seekTime);
+    };
+
+    const handleTrackSelect = (index) => {
+        setCurrentTrackIndex(index);
+        setPlayedTracks(prev => [...prev, index]);
+        setShowTrackList(false);
+    };
+
+    const formatTime = (seconds) => {
+        if (!seconds || isNaN(seconds)) return "0:00";
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const handleTimerToggle = () => {
+        setIsTimerRunning(!isTimerRunning);
+    };
+
+    const handleTimerReset = () => {
+        setIsTimerRunning(false);
+        setTimerSeconds(30);
     };
 
     const handleDraw = () => {
@@ -124,15 +314,140 @@ function App() {
                     </div>
                 </div>
 
-                {/* Music Status */}
+                {/* Music Player Controls */}
                 {isMusicPlaying && (
-                    <div className="text-xs mb-2">
-                        <div className="text-point-green flex items-center justify-center gap-2">
-                            <div className="w-2 h-2 bg-point-green rounded-full animate-pulse"></div>
-                            🎵 Music player active - Click play button below if needed
+                    <div className="w-full max-w-md mx-auto mb-4 bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
+                        {/* Track Info & Controls */}
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                            {/* Shuffle Button */}
+                            <button
+                                onClick={() => setIsShuffleOn(!isShuffleOn)}
+                                className={`transition-colors text-xl px-2 hover:scale-110 active:scale-95 ${isShuffleOn ? 'text-card-gold' : 'text-gray-600 hover:text-gray-400'}`}
+                                title="Toggle Shuffle"
+                            >
+                                🔀
+                            </button>
+
+                            <button
+                                onClick={handlePrevTrack}
+                                className="text-white hover:text-card-gold transition-colors text-xl px-2 hover:scale-110 active:scale-95"
+                                title="Previous track"
+                            >
+                                ⏮️
+                            </button>
+
+                            <div className="flex-1 text-center">
+                                <div className="text-xs text-point-green flex items-center justify-center gap-2">
+                                    <div className="w-2 h-2 bg-point-green rounded-full animate-pulse"></div>
+                                    <span className="font-medium">🎵 {tracks[currentTrackIndex].name}</span>
+                                </div>
+                                {isShuffleOn && (
+                                    <div className="flex items-center justify-center gap-1 mt-1">
+                                        <div className="w-1.5 h-1.5 bg-card-gold rounded-full animate-pulse"></div>
+                                        <span className="text-[9px] text-card-gold font-bold uppercase tracking-wider">Shuffle On</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <button
+                                onClick={handleNextTrack}
+                                className="text-white hover:text-card-gold transition-colors text-xl px-2 hover:scale-110 active:scale-95"
+                                title={isShuffleOn ? "Next track (random)" : "Next track"}
+                            >
+                                ⏭️
+                            </button>
+
+                            {/* Spacer to keep the song title perfectly centered since we added a button on the left */}
+                            <div className="w-[36px]"></div>
                         </div>
+
+                        {/* Progress Bar */}
+                        <div className="space-y-1">
+                            <input
+                                type="range"
+                                min="0"
+                                max={duration || 0}
+                                value={currentTime}
+                                onChange={handleSeek}
+                                className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                                style={{
+                                    background: `linear-gradient(to right, #10b981 0%, #10b981 ${(currentTime / duration) * 100}%, #374151 ${(currentTime / duration) * 100}%, #374151 100%)`
+                                }}
+                            />
+                            <div className="flex justify-between text-[10px] text-gray-500 font-mono">
+                                <span>{formatTime(currentTime)}</span>
+                                <span>{formatTime(duration)}</span>
+                            </div>
+                        </div>
+
+                        {/* Track List Button */}
+                        <button
+                            onClick={() => setShowTrackList(!showTrackList)}
+                            className="w-full mt-3 text-xs text-gray-400 hover:text-card-gold transition-colors font-medium uppercase tracking-wider"
+                        >
+                            {showTrackList ? '▲ Hide Tracks' : '▼ View All Tracks'}
+                        </button>
+
+                        {/* Track List Dropdown */}
+                        {showTrackList && (
+                            <div className="mt-3 space-y-1 max-h-48 overflow-y-auto">
+                                {tracks.map((track, index) => (
+                                    <button
+                                        key={index}
+                                        onClick={() => handleTrackSelect(index)}
+                                        className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-all ${
+                                            index === currentTrackIndex
+                                                ? 'bg-card-gold/20 text-card-gold font-bold'
+                                                : 'bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white'
+                                        }`}
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            {index === currentTrackIndex && (
+                                                <div className="w-1.5 h-1.5 bg-point-green rounded-full animate-pulse"></div>
+                                            )}
+                                            {track.name}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
+
+                {/* 30 Second Timer */}
+                <div className="w-full max-w-md mx-auto mb-4 bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
+                    <div className="text-center mb-3">
+                        <div className={`text-5xl font-black font-mono ${
+                            timerSeconds <= 5 && timerSeconds > 0 ? 'text-red-500 animate-pulse' : 
+                            timerSeconds === 0 ? 'text-red-600' : 
+                            'text-white'
+                        }`}>
+                            {timerSeconds}
+                        </div>
+                        <div className="text-[10px] text-gray-500 uppercase tracking-wider mt-1">
+                            seconds
+                        </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleTimerToggle}
+                            className={`flex-1 font-bold py-2 px-4 rounded-lg transition-all text-sm ${
+                                isTimerRunning
+                                    ? 'bg-pass-orange text-white hover:bg-pass-orange/80'
+                                    : 'bg-point-green text-white hover:bg-point-green/80'
+                            }`}
+                        >
+                            {isTimerRunning ? '⏸️ Pause' : '▶️ Start'}
+                        </button>
+                        <button
+                            onClick={handleTimerReset}
+                            className="flex-1 bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-all text-sm"
+                        >
+                            🔄 Reset
+                        </button>
+                    </div>
+                </div>
 
                 {/* SCOREBOARD & HISTORY */}
                 <div className="flex justify-between items-start gap-4">
@@ -213,39 +528,27 @@ function App() {
                 </div>
             </div>
 
-            {/* YOUTUBE MUSIC PLAYER - Simple iframe approach */}
-            {isMusicPlaying && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        bottom: '20px',
-                        right: '20px',
-                        width: '480px',
-                        height: '270px',
-                        opacity: 0.5,
-                        border: '3px solid rgba(212, 175, 55, 0.8)',
-                        borderRadius: '8px',
-                        overflow: 'hidden',
-                        zIndex: 50,
-                        cursor: 'pointer',
-                        transition: 'opacity 0.2s',
-                        backgroundColor: '#000'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0.5'}
-                >
-                    <iframe
-                        width="480"
-                        height="270"
-                        src={youtubeEmbedUrl}
-                        title="Background Music"
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        style={{ width: '100%', height: '100%' }}
-                    />
-                </div>
-            )}
+            {/* Custom Slider Styles */}
+            <style jsx>{`
+                input[type="range"].slider::-webkit-slider-thumb {
+                    appearance: none;
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 50%;
+                    background: #10b981;
+                    cursor: pointer;
+                    border: 2px solid #fff;
+                }
+                
+                input[type="range"].slider::-moz-range-thumb {
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 50%;
+                    background: #10b981;
+                    cursor: pointer;
+                    border: 2px solid #fff;
+                }
+            `}</style>
         </div>
     );
 }
