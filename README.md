@@ -14,27 +14,29 @@ A digital implementation of the stack-based card game **Lock-In**, built with Re
 * **Format:** Stack-based card game
 * **Players:** 4+ players, divided into 2 teams.
 * **Roles:** 1 Describer and 1+ Guessers per team.
-* **Objective:** First team to capture **13 cards** wins the game.
-* **Total Deck Size:** 25 cards per round.
+* **Objective:** First team to capture the majority of the cards wins the game.
+* **Total Deck Size:** 25 cards per round (Or any arbitrary odd amount honestly).
 
 ---
 
 ### II. The Standard Turn Flow
-
-1.  **The Draw**
+1.  **Choosing the Team to go first**
+    * Flip a coin. Whoever wins the flip gets to go first
+    * From this point onward, whichever team gives the first hint alternates
+2.  **The Draw**
     * A card is drawn from the stack.
     * Only the **Describers** from each team may look at it.
 
-2.  **The Activation Roll**
+3.  **The Activation Roll**
     * Roll a single six-sided die (D6).
     * **Roll 1–5:** Standard Round. No special constraints.
     * **Roll 6:** Power-up Round. Roll the D6 again to determine which neutral constraint applies (see Section III).
 
-3.  **The Clues**
+4.  **The Clues**
     * **Team A (The Coin Flip Winner):** The Describer gives a **single-word hint**. The Guesser makes a guess.
     * **Team B:** If Team A is incorrect, the Team B Describer gives their own hint. Team B's Guesser now has the advantage of hearing *both* hints.
 
-4.  **Escalation**
+5.  **Escalation**
     * If the card is not guessed after **3 failed hints from both sides** (6 total hints), the hint limit increases to **2 words** for all subsequent hints until the card is claimed.
 
 ---
