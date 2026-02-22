@@ -57,12 +57,13 @@ export default function App() {
     return (
         <div className="min-h-screen flex flex-col items-center p-8 bg-dark-bg font-sans overflow-y-auto">
 
+            {/* HEADER & SCOREBOARD */}
             <div className="text-center w-full max-w-4xl mb-6">
                 <h1 className="text-card-gold text-5xl font-black mb-4 tracking-widest drop-shadow-lg">
                     LOCK-IN
                 </h1>
 
-                {/* --- RESTORED TOGGLES CONTAINER --- */}
+                {/* TOGGLES CONTAINER */}
                 <div className="flex flex-col md:flex-row items-center justify-center gap-6 mb-6">
 
                     {/* Dice Toggle */}
@@ -91,10 +92,10 @@ export default function App() {
 
                 </div>
 
-                {/* Pass the state down as a prop */}
                 <MusicPlayer isMusicPlaying={isMusicPlaying} />
 
-                <Timer />
+                {/* Timer was removed from here and moved down! */}
+
                 <ScoreBoard
                     teamAScore={teamAScore}
                     teamBScore={teamBScore}
@@ -103,27 +104,44 @@ export default function App() {
                 />
             </div>
 
-            {/* PLAY AREA */}
-            <div className="flex-1 flex flex-col items-center justify-center gap-6 py-4 z-10">
-                {useDigitalDice && (
-                    <div className="flex flex-col items-center gap-4">
-                        <Dice value={diceResult} isRolling={isRolling} />
-                        {activePowerUp && !isRolling && (
-                            <div className="max-w-xs bg-pass-orange/20 border-2 border-pass-orange p-4 rounded-xl text-center animate-bounce-short">
-                                <h3 className="text-pass-orange font-black uppercase tracking-tighter text-sm">
-                                    ⚡ {activePowerUp.name}
-                                </h3>
-                                <p className="text-white text-[10px] leading-tight mt-1 font-medium italic">
-                                    {activePowerUp.desc}
-                                </p>
-                            </div>
-                        )}
+            {/* PLAY AREA - 3 COLUMN LAYOUT */}
+            <div className="flex-1 flex flex-col md:flex-row items-center justify-center w-full max-w-6xl gap-8 py-4 z-10">
+
+                {/* LEFT COLUMN: DICE */}
+                <div className="flex-1 flex justify-end items-center w-full">
+                    {useDigitalDice && (
+                        <div className="flex flex-col items-center gap-4">
+                            <Dice value={diceResult} isRolling={isRolling} />
+                            {activePowerUp && !isRolling && (
+                                <div className="max-w-xs bg-pass-orange/20 border-2 border-pass-orange p-4 rounded-xl text-center animate-bounce-short">
+                                    <h3 className="text-pass-orange font-black uppercase tracking-tighter text-sm">
+                                        ⚡ {activePowerUp.name}
+                                    </h3>
+                                    <p className="text-white text-[10px] leading-tight mt-1 font-medium italic">
+                                        {activePowerUp.desc}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* CENTER COLUMN: CARD */}
+                <div className="flex-shrink-0 z-20">
+                    <Card word={currentWord} isFlipped={isFlipped} />
+                </div>
+
+                {/* RIGHT COLUMN: TIMER */}
+                <div className="flex-1 flex justify-start items-center w-full">
+                    {/* Constraining the width so it looks proportional next to the card */}
+                    <div className="w-full max-w-[280px]">
+                        <Timer />
                     </div>
-                )}
-                <Card word={currentWord} isFlipped={isFlipped} />
+                </div>
+
             </div>
 
-            {/* CONTROLS */}
+            {/* BOTTOM CONTROLS */}
             <div className="w-full max-w-md flex flex-col gap-3 mt-6 z-20">
                 {useDigitalDice && (
                     <button onClick={rollDice} disabled={isRolling} className="w-full bg-white text-dark-bg text-sm font-black py-2 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-all uppercase tracking-widest">
