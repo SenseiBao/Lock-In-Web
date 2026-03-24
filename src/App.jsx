@@ -20,7 +20,7 @@ import point4 from './assets/sounds/point4.mp3';
 export default function App() {
     const {
         currentWord, teamAScore, teamBScore, teamAWords, teamBWords,
-        drawCard, recordWin, diceResult, isRolling, rollDice, activePowerUp
+        drawCard, recordWin, diceResult, isRolling, rollDice, activePowerUp, lookaheadCards
     } = useGameLogic();
 
     const [isFlipped, setIsFlipped] = useState(false);
@@ -120,6 +120,15 @@ export default function App() {
                                     <p className="text-white text-[10px] leading-tight mt-1 font-medium italic">
                                         {activePowerUp.desc}
                                     </p>
+                                    {lookaheadCards.length > 0 && (
+                                        <div className="mt-3 flex flex-col gap-1">
+                                            {lookaheadCards.map((word, i) => (
+                                                <div key={i} className="bg-dark-bg/60 border border-pass-orange/40 rounded px-2 py-1 text-card-gold text-xs font-black tracking-widest">
+                                                    {word}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

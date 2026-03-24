@@ -18,20 +18,41 @@ const shuffle = (array) => {
 /* Word List            */
 /* -------------------- */
 const INITIAL_WORDS = [
-    "APPLE", "BREAD", "CHAIR", "EAGLE", "GLASS", "HOUSE", "ISLAND", "JACKET", "KITCHEN", "LEMON",
-    "MOUNTAIN", "ORANGE", "PILLOW", "QUEEN", "RIVER", "STREET", "TABLE", "UMBRELLA", "VALLEY", "WINDOW",
-    "ZEBRA", "AIRPORT", "CAMERA", "ENGINE", "FOREST", "GARDEN", "HAMMER", "INSECT", "LADDER", "MIRROR",
-    "OCEAN", "POCKET", "RABBIT", "SCHOOL", "TIGER", "VILLAGE", "WALNUT", "BOTTLE", "COFFEE", "DESERT",
-    "ELBOW", "FINGER", "GUITAR", "HELMET", "ICEBERG", "JUNGLE", "KNIFE", "LETTER", "MONKEY", "OVEN",
-    "PENCIL", "ROCKET", "SADDLE", "TOMATO", "VIOLIN", "BAMBOO", "CRAYON", "DRAGON", "FLOWER", "GHOST",
-    "HARBOR", "IRON", "KANGAROO", "LANTERN", "MAGNET", "NEEDLE", "ONION", "PARROT", "REMOTE", "SILVER",
-    "TUNNEL", "UNIFORM", "VACUUM", "WAGON", "XRAY", "ANCHOR", "BUBBLE", "CASTLE", "DOCTOR", "FARMER",
-    "GOBLIN", "HUNTER", "INFANT", "JOKER", "KNIGHT", "LAWYER", "PLAYER", "TARGET", "VESSEL", "WIZARD",
-    "ACTOR", "DANCE", "JOURNEY", "PARTY", "RECORD", "ATTACK", "ESCAPE", "BUILD", "CHASE", "BRIGHT",
-    "COLD", "DARK", "FAST", "HAPPY", "LARGE", "MODERN", "NOBLE", "PROUD", "QUICK", "SMALL",
-    "TOUGH", "WILD", "YOUNG", "CLEAN", "DIRTY", "EARLY", "FULL", "GREEN", "HEAVY", "LIGHT",
-    "MUDDY", "NARROW", "PLAIN", "QUIET", "READY", "SHARP", "THICK", "WIDE", "BRAVE", "FINAL",
-    "GRAND", "HUGE", "LUCKY", "MAGIC", "FAMOUS"
+    // Food & Drink
+    "PIZZA", "BURGER", "SUSHI", "TACO", "PANCAKE", "CHOCOLATE", "ICE CREAM", "POPCORN", "SMOOTHIE", "COFFEE",
+    "NACHOS", "LEMONADE", "BACON", "DONUT", "SPAGHETTI", "CHEESECAKE", "MILKSHAKE", "BURRITO", "WAFFLE", "HOT DOG",
+
+    // Animals
+    "DOLPHIN", "PENGUIN", "ELEPHANT", "GIRAFFE", "KANGAROO", "SHARK", "BUTTERFLY", "OCTOPUS", "FLAMINGO", "GORILLA",
+    "CHEETAH", "CROCODILE", "PORCUPINE", "HAMSTER", "CHAMELEON", "PEACOCK", "PLATYPUS", "BISON", "LOBSTER", "FIREFLY",
+
+    // Places & Landmarks
+    "BEACH", "MUSEUM", "AIRPORT", "LIBRARY", "HOSPITAL", "ZOO", "STADIUM", "LIGHTHOUSE", "VOLCANO", "SUPERMARKET",
+    "CASINO", "SKYSCRAPER", "CEMETERY", "AMUSEMENT PARK", "FIRE STATION", "SUBWAY", "ROOFTOP", "PENTHOUSE", "BARN", "LIGHTHOUSE",
+
+    // Characters & Archetypes
+    "SUPERHERO", "VAMPIRE", "PIRATE", "MERMAID", "WIZARD", "NINJA", "ASTRONAUT", "DETECTIVE", "COWBOY", "ROBOT",
+    "ZOMBIE", "GLADIATOR", "WITCH", "SAMURAI", "VIKING", "CLOWN", "SPY", "CHEF", "LIFEGUARD", "BOUNTY HUNTER",
+
+    // Technology & Modern Life
+    "SMARTPHONE", "LAPTOP", "HEADPHONES", "PASSWORD", "SELFIE", "PODCAST", "STREAMING", "WIFI", "EMOJI", "CHARGER",
+    "DRONE", "VIRTUAL REALITY", "CREDIT CARD", "SOCIAL MEDIA", "ALARM CLOCK", "GPS", "SUBSCRIPTION", "INFLUENCER", "MEME", "HACKER",
+
+    // Sports & Activities
+    "SOCCER", "BASKETBALL", "TENNIS", "GOLF", "BOXING", "SURFING", "SKIING", "BASEBALL", "MARATHON", "GYMNASTICS",
+    "SKATEBOARDING", "ROCK CLIMBING", "SCUBA DIVING", "SKYDIVING", "WRESTLING", "ARCHERY", "FENCING", "BOWLING", "KARATE", "ROWING",
+
+    // Weather & Nature
+    "TORNADO", "GLACIER", "WATERFALL", "EARTHQUAKE", "THUNDER", "HURRICANE", "LIGHTNING", "BLIZZARD", "AVALANCHE", "RAINBOW",
+    "QUICKSAND", "TIDAL WAVE", "DROUGHT", "SOLAR ECLIPSE", "METEOR", "SANDSTORM", "HEATWAVE", "FOG", "MUDSLIDE", "GEYSER",
+
+    // Events & Situations
+    "BIRTHDAY", "WEDDING", "GRADUATION", "FUNERAL", "VACATION", "TRAFFIC JAM", "BLACKOUT", "PROTEST", "AUCTION", "KARAOKE",
+    "ROAD TRIP", "CAMPING", "PROM", "JURY DUTY", "LAYOVER", "BLIND DATE", "JOB INTERVIEW", "FIRST DATE", "SURPRISE PARTY", "HAUNTED HOUSE",
+
+    // Abstract & Concepts
+    "NIGHTMARE", "JEALOUSY", "PROCRASTINATION", "CONSPIRACY", "HEARTBREAK", "GOSSIP", "INSOMNIA", "DÉJÀ VU", "STAGE FRIGHT", "NOSTALGIA",
+    "PEER PRESSURE", "BURNOUT", "ADDICTION", "AMNESIA", "BRAINSTORM", "GUILT TRIP", "CULTURE SHOCK", "MIDLIFE CRISIS", "IMPOSTOR SYNDROME", "WANDERLUST",
 ];
 
 const POWER_UPS = {
@@ -60,6 +81,7 @@ export const useGameLogic = () => {
     const [diceResult, setDiceResult] = useState(null);
     const [isRolling, setIsRolling] = useState(false);
     const [activePowerUp, setActivePowerUp] = useState(null);
+    const [lookaheadCards, setLookaheadCards] = useState([]);
     const [playPowerUp] = useSound(powerupSfx);
 
     const [phase, setPhase] = useState("idle");
@@ -68,23 +90,49 @@ export const useGameLogic = () => {
     /* -------------------- */
     /* Dice Logic           */
     /* -------------------- */
+    const FORBIDDEN_LETTERS = { 1: 'E', 2: 'T', 3: 'A', 4: 'O', 5: 'I', 6: 'N' };
+
     const rollDice = () => {
         if (isRolling) return; // prevent spamming
 
         setIsRolling(true);
-        setActivePowerUp(null); // clear old powerup
+        setActivePowerUp(null);
+        setLookaheadCards([]);
 
         setTimeout(() => {
             const roll = Math.floor(Math.random() * 6) + 1;
             setDiceResult(roll);
 
-            // Trigger powerup sound only if this roll is 6
-            if (roll === 6) {
-                if (!activePowerUp) { // only play if no active powerup yet
+            // Trigger power-up on 5 or 6
+            if (roll === 5 || roll === 6) {
+                if (!activePowerUp) {
                     playPowerUp();
                 }
                 const powerRoll = Math.floor(Math.random() * 6) + 1;
-                setActivePowerUp(POWER_UPS[powerRoll]);
+
+                if (powerRoll === 4) {
+                    // Auto-pick the forbidden letter instead of asking players to re-roll
+                    const letterRoll = Math.floor(Math.random() * 6) + 1;
+                    const letter = FORBIDDEN_LETTERS[letterRoll];
+                    setActivePowerUp({
+                        ...POWER_UPS[4],
+                        desc: `Forbidden letter: "${letter}". No hints may contain the letter ${letter}.`
+                    });
+                } else if (powerRoll === 6) {
+                    // Lookahead: peek at up to 3 random cards from the deck
+                    setActivePowerUp(POWER_UPS[6]);
+                    setDeck(prevDeck => {
+                        const indices = new Set();
+                        while (indices.size < Math.min(3, prevDeck.length)) {
+                            indices.add(Math.floor(Math.random() * prevDeck.length));
+                        }
+                        const peeked = [...indices].map(i => prevDeck[i]);
+                        setLookaheadCards(peeked);
+                        return prevDeck; // deck unchanged
+                    });
+                } else {
+                    setActivePowerUp(POWER_UPS[powerRoll]);
+                }
             }
 
             setIsRolling(false);
@@ -143,6 +191,7 @@ export const useGameLogic = () => {
         setDiceResult(null);
         setPhase("idle");
         setActivePowerUp(null);
+        setLookaheadCards([]);
     };
 
     /* -------------------- */
@@ -164,6 +213,7 @@ export const useGameLogic = () => {
         diceResult,
         isRolling,
         activePowerUp,
+        lookaheadCards,
         phase,
         winner,
 

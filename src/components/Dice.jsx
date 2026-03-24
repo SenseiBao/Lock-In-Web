@@ -24,8 +24,8 @@ const Dice = ({ value, isRolling }) => {
                 )}
             </motion.div>
 
-            {/* Power-up hint if roll is 6 */}
-            {!isRolling && value === 6 && (
+            {/* Power-up hint if roll is 5 or 6 */}
+            {!isRolling && (value === 5 || value === 6) && (
                 <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
