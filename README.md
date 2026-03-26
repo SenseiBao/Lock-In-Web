@@ -29,8 +29,8 @@ A digital implementation of the stack-based card game **Lock-In**, built with Re
 
 3.  **The Activation Roll**
     * Roll a single six-sided die (D6).
-    * **Roll 1–5:** Standard Round. No special constraints.
-    * **Roll 6:** Power-up Round. Roll the D6 again to determine which neutral constraint applies (see Section III).
+    * **Roll 1–4:** Standard Round. No special constraints.
+    * **Roll 5–6:** Power-up Round. Roll the D6 again to determine which neutral constraint applies (see Section III).
 
 4.  **The Clues**
     * **Team A (The Coin Flip Winner):** The Describer gives a **single-word hint**. The Guesser makes a guess.
@@ -41,17 +41,17 @@ A digital implementation of the stack-based card game **Lock-In**, built with Re
 
 ---
 
-### III. Neutral Power-Up Table (Roll on a 6)
+### III. Neutral Power-Up Table (Roll on a 5 or 6)
 *Power-ups affect both teams equally and are meant to add a challenge.*
 
 | Roll | Power-Up | Description |
 | :---: | :--- | :--- |
 | **1** | **Whiteboard Challenge** | One whiteboard is shared. Describers take turns drawing **one continuous stroke** at a time until the word is guessed. (Time limit applies). |
-| **2** | **Simultaneous Charades** | **No talking.** Both Describers act out the word at the same time. (10-second cooldown between guesses). |
+| **2** | **Simultaneous Charades** | **No words.** Both Describers act out the word at the same time. Noises and sounds are allowed. |
 | **3** | **Low Bandwidth** | Describers can only use **one-syllable words** for their hints. |
-| **4** | **Data Corruption** | Roll the die again. The corresponding letter is **forbidden** from hints:<br>1=**E**, 2=**T**, 3=**A**, 4=**O**, 5=**I**, 6=**N** |
+| **4** | **Data Corruption** | A letter is automatically chosen and is **forbidden** from all hints:<br>1=**E**, 2=**T**, 3=**A**, 4=**O**, 5=**I**, 6=**N** |
 | **5** | **High Traffic** | **Simultaneous Guessing:** Both Describers hint and both Guessers shout out at the same time. 10-second cooldown enforced between guesses. |
-| **6** | **Lookahead** | Both Guessers view **3 random cards** in the deck. The deck is then shuffled, a new card is drawn, and the die is re-rolled. |
+| **6** | **Reverse Roles** | The Guesser now describes and the Describer now guesses. Draw a **new card** for this turn only. |
 
 ---
 

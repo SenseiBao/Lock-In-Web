@@ -20,12 +20,14 @@ import point4 from './assets/sounds/point4.mp3';
 export default function App() {
     const {
         currentWord, teamAScore, teamBScore, teamAWords, teamBWords,
-        drawCard, recordWin, diceResult, isRolling, rollDice, activePowerUp, lookaheadCards
+        drawCard, recordWin, diceResult, isRolling, rollDice, activePowerUp
     } = useGameLogic();
 
     const [isFlipped, setIsFlipped] = useState(false);
     const [useDigitalDice, setUseDigitalDice] = useState(false);
     const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+    const [teamAName, setTeamAName] = useState("Team A");
+    const [teamBName, setTeamBName] = useState("Team B");
 
     const [playDraw1] = useSound(drawSfx1);
     const [playDraw2] = useSound(drawSfx2);
@@ -101,6 +103,10 @@ export default function App() {
                     teamBScore={teamBScore}
                     teamAWords={teamAWords}
                     teamBWords={teamBWords}
+                    teamAName={teamAName}
+                    teamBName={teamBName}
+                    setTeamAName={setTeamAName}
+                    setTeamBName={setTeamBName}
                 />
             </div>
 
@@ -120,15 +126,6 @@ export default function App() {
                                     <p className="text-white text-[10px] leading-tight mt-1 font-medium italic">
                                         {activePowerUp.desc}
                                     </p>
-                                    {lookaheadCards.length > 0 && (
-                                        <div className="mt-3 flex flex-col gap-1">
-                                            {lookaheadCards.map((word, i) => (
-                                                <div key={i} className="bg-dark-bg/60 border border-pass-orange/40 rounded px-2 py-1 text-card-gold text-xs font-black tracking-widest">
-                                                    {word}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
                                 </div>
                             )}
                         </div>
@@ -161,11 +158,11 @@ export default function App() {
                     DRAW CARD
                 </button>
                 <div className="flex gap-3">
-                    <button onClick={() => handleWin(true)} className="flex-1 bg-point-green/10 text-point-green border border-point-green/40 font-bold py-3 rounded-xl hover:bg-point-green hover:text-dark-bg transition-all text-sm">
-                        TEAM A +1
+                    <button onClick={() => handleWin(true)} className="flex-1 bg-point-green/10 text-point-green border border-point-green/40 font-bold py-3 rounded-xl hover:bg-point-green hover:text-dark-bg transition-all text-sm uppercase">
+                        {teamAName} +1
                     </button>
-                    <button onClick={() => handleWin(false)} className="flex-1 bg-point-green/10 text-point-green border border-point-green/40 font-bold py-3 rounded-xl hover:bg-point-green hover:text-dark-bg transition-all text-sm">
-                        TEAM B +1
+                    <button onClick={() => handleWin(false)} className="flex-1 bg-point-green/10 text-point-green border border-point-green/40 font-bold py-3 rounded-xl hover:bg-point-green hover:text-dark-bg transition-all text-sm uppercase">
+                        {teamBName} +1
                     </button>
                 </div>
             </div>
