@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import cardBackImg from '../assets/images/card_back.jpg';
 import cardFrontImg from '../assets/images/card_front.png';
 
-const Card = ({ word, isFlipped }) => {
+const Card = ({ word, isFlipped, hideWord }) => {
     return (
         <div className="perspective-1000 w-[350px] h-[500px]">
             <motion.div
@@ -31,7 +31,7 @@ const Card = ({ word, isFlipped }) => {
                     {/* 2. The Text (Overlay) */}
                     <div className="relative z-10 w-full">
                         <h2 className="text-dark-bg text-5xl font-black text-center px-4 uppercase drop-shadow-md break-words">
-                            {word || "???"}
+                            {hideWord ? '🔒' : (word || '???')}
                         </h2>
                     </div>
                 </div>
