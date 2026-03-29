@@ -212,8 +212,13 @@ export default function GuesserPage() {
             {/* Buzzer */}
             <div className="flex flex-col items-center gap-5">
                 <div className="relative w-[200px] h-[200px] flex items-center justify-center">
-                    {/* Ring track */}
-                    <svg className="absolute inset-0" style={{ transform: 'rotate(-90deg)' }} width="200" height="200">
+                    {/* Ring track — pointer-events none so clicks pass through to button */}
+                    <svg
+                        className="absolute inset-0"
+                        style={{ transform: 'rotate(-90deg)', pointerEvents: 'none' }}
+                        width="200"
+                        height="200"
+                    >
                         <circle cx="100" cy="100" r={RADIUS} fill="none" stroke="#1f2937" strokeWidth="10" />
                         {timeLeft > 0 && (
                             <circle
@@ -235,7 +240,7 @@ export default function GuesserPage() {
                         whileTap={canBuzz ? { scale: 0.88 } : {}}
                         animate={justBuzzed ? { scale: [1, 1.12, 1] } : {}}
                         transition={{ duration: 0.25 }}
-                        className={`w-40 h-40 rounded-full font-black text-2xl shadow-2xl transition-colors select-none ${
+                        className={`relative z-10 w-40 h-40 rounded-full font-black text-2xl shadow-2xl transition-colors select-none ${
                             canBuzz
                                 ? 'bg-pass-orange text-dark-bg cursor-pointer active:brightness-110'
                                 : 'bg-gray-800 text-gray-500 cursor-not-allowed'
