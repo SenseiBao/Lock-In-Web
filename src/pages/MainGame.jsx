@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import useSound from 'use-sound';
 import { AnimatePresence, motion } from 'framer-motion';
+import { QRCodeSVG } from 'qrcode.react';
 import { useGameLogic } from '../hooks/useGameLogic';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
@@ -40,7 +41,7 @@ export default function MainGame() {
     const [roomCode, setRoomCode] = useState(null);
     const [isCreatingRoom, setIsCreatingRoom] = useState(false);
     const [buzzerNotification, setBuzzerNotification] = useState(null);
-    const [copiedLink, setCopiedLink] = useState(null);
+    const [qrModal, setQrModal] = useState(null); // 'describe' | 'join' | null
     const channelRef = useRef(null);
 
     const [playDraw1] = useSound(drawSfx1);
@@ -128,15 +129,52 @@ export default function MainGame() {
         };
     }, [roomCode]);
 
-    const copyLink = (type) => {
-        const url = `${window.location.origin}/${type}/${roomCode}`;
-        navigator.clipboard.writeText(url);
-        setCopiedLink(type);
-        setTimeout(() => setCopiedLink(null), 2000);
-    };
+    const getLink = (type) => `${window.location.origin}/${type}/${roomCode}`;
 
     return (
         <div className="min-h-screen flex flex-col items-center p-8 bg-dark-bg font-sans overflow-y-auto">
+
+            {/* QR Code modal */}
+            <AnimatePresence>
+                {qrModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-6"
+                        onClick={() => setQrModal(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.85, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.85, opacity: 0 }}
+                            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+                            className="bg-white rounded-2xl p-8 flex flex-col items-center gap-4 shadow-2xl"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <p className="text-dark-bg text-xs font-black uppercase tracking-widest">
+                                {qrModal === 'describe' ? '📝 Describer Link' : '🔔 Guesser Link'}
+                            </p>
+                            <QRCodeSVG
+                                value={getLink(qrModal)}
+                                size={220}
+                                bgColor="#ffffff"
+                                fgColor="#0f172a"
+                                level="M"
+                            />
+                            <p className="text-gray-400 text-[10px] font-mono break-all text-center max-w-[220px]">
+                                {getLink(qrModal)}
+                            </p>
+                            <button
+                                onClick={() => setQrModal(null)}
+                                className="text-gray-500 text-xs font-bold uppercase tracking-widest hover:text-dark-bg transition-colors"
+                            >
+                                Close
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Buzzer notification */}
             <AnimatePresence>
@@ -194,16 +232,16 @@ export default function MainGame() {
                                     🔑 {roomCode}
                                 </span>
                                 <button
-                                    onClick={() => copyLink('describe')}
+                                    onClick={() => setQrModal('describe')}
                                     className="text-[10px] font-bold text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 px-3 py-1.5 rounded-lg transition-colors uppercase tracking-tight"
                                 >
-                                    {copiedLink === 'describe' ? '✓ Copied!' : '📋 Describer Link'}
+                                    📝 Describer Link
                                 </button>
                                 <button
-                                    onClick={() => copyLink('join')}
+                                    onClick={() => setQrModal('join')}
                                     className="text-[10px] font-bold text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 px-3 py-1.5 rounded-lg transition-colors uppercase tracking-tight"
                                 >
-                                    {copiedLink === 'join' ? '✓ Copied!' : '📋 Guesser Link'}
+                                    🔔 Guesser Link
                                 </button>
                             </>
                         ) : (
