@@ -214,14 +214,14 @@ export default function MainGame() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Show Word</span>
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Hide Word</span>
                         <button
                             onClick={() => setHideWord(!hideWord)}
                             className={`w-10 h-5 rounded-full transition-colors relative ${hideWord ? 'bg-gray-700' : 'bg-point-green'}`}
                         >
                             <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${hideWord ? 'left-0.5' : 'left-5.5'}`} />
                         </button>
-                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Hide Word</span>
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Show Word</span>
                     </div>
 
                     <div className="flex items-center gap-3">
