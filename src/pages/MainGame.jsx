@@ -34,6 +34,7 @@ export default function MainGame() {
     const [isFlipped, setIsFlipped] = useState(false);
     const [useDigitalDice, setUseDigitalDice] = useState(false);
     const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+    const [hideWord, setHideWord] = useState(false);
     const [teamAName, setTeamAName] = useState('Team A');
     const [teamBName, setTeamBName] = useState('Team B');
 
@@ -92,15 +93,18 @@ export default function MainGame() {
     // Sync game state to Supabase whenever anything relevant changes
     useEffect(() => {
         if (!roomCode) return;
-        supabase.from('rooms').update({
-            current_word: currentWord,
-            team_a_score: teamAScore,
-            team_b_score: teamBScore,
-            team_a_name: teamAName,
-            team_b_name: teamBName,
-            active_power_up: activePowerUp,
-            updated_at: new Date().toISOString(),
-        }).eq('room_code', roomCode);
+        const sync = async () => {
+            await supabase.from('rooms').update({
+                current_word: currentWord,
+                team_a_score: teamAScore,
+                team_b_score: teamBScore,
+                team_a_name: teamAName,
+                team_b_name: teamBName,
+                active_power_up: activePowerUp,
+                updated_at: new Date().toISOString(),
+            }).eq('room_code', roomCode);
+        };
+        sync();
     }, [roomCode, currentWord, teamAScore, teamBScore, teamAName, teamBName, activePowerUp]);
 
     // Subscribe to buzzer presses from guessers
@@ -210,6 +214,17 @@ export default function MainGame() {
                     </div>
 
                     <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Show Word</span>
+                        <button
+                            onClick={() => setHideWord(!hideWord)}
+                            className={`w-10 h-5 rounded-full transition-colors relative ${hideWord ? 'bg-gray-700' : 'bg-point-green'}`}
+                        >
+                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${hideWord ? 'left-0.5' : 'left-5.5'}`} />
+                        </button>
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Hide Word</span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
                         <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Music Off</span>
                         <button
                             onClick={() => setIsMusicPlaying(!isMusicPlaying)}
@@ -292,7 +307,7 @@ export default function MainGame() {
 
                 {/* CENTER COLUMN: CARD — word hidden when room is active */}
                 <div className="flex-shrink-0 z-20">
-                    <Card word={currentWord} isFlipped={isFlipped} hideWord={!!roomCode} />
+                    <Card word={currentWord} isFlipped={isFlipped} hideWord={hideWord} />
                 </div>
 
                 {/* RIGHT COLUMN: TIMER */}
