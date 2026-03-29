@@ -13,8 +13,14 @@ import { createClient } from '@supabase/supabase-js';
  *     active_power_up jsonb,
  *     buzzer_locked_by text,
  *     buzzer_locked_at timestamptz,
+ *     team_a_players jsonb default '[]',
+ *     team_b_players jsonb default '[]',
  *     updated_at timestamptz default now()
  *   );
+ *
+ * If updating an existing table, run:
+ *   alter table rooms add column if not exists team_a_players jsonb default '[]';
+ *   alter table rooms add column if not exists team_b_players jsonb default '[]';
  *
  *   alter table rooms enable row level security;
  *   create policy "Allow all" on rooms for all using (true) with check (true);

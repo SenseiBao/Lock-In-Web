@@ -43,6 +43,8 @@ export default function MainGame() {
     const [isCreatingRoom, setIsCreatingRoom] = useState(false);
     const [buzzerNotification, setBuzzerNotification] = useState(null);
     const [qrModal, setQrModal] = useState(null); // 'describe' | 'join' | null
+    const [teamAPlayers, setTeamAPlayers] = useState([]);
+    const [teamBPlayers, setTeamBPlayers] = useState([]);
     const channelRef = useRef(null);
 
     const [playDraw1] = useSound(drawSfx1);
@@ -85,6 +87,8 @@ export default function MainGame() {
             team_a_name: teamAName,
             team_b_name: teamBName,
             active_power_up: activePowerUp,
+            team_a_players: [],
+            team_b_players: [],
         });
         if (!error) setRoomCode(code);
         setIsCreatingRoom(false);
@@ -119,12 +123,14 @@ export default function MainGame() {
                 table: 'rooms',
                 filter: `room_code=eq.${roomCode}`,
             }, (payload) => {
-                const { buzzer_locked_by, buzzer_locked_at } = payload.new;
+                const { buzzer_locked_by, buzzer_locked_at, team_a_players, team_b_players } = payload.new;
                 const prevTime = payload.old?.buzzer_locked_at;
                 if (buzzer_locked_by && buzzer_locked_at !== prevTime) {
                     setBuzzerNotification(buzzer_locked_by);
                     setTimeout(() => setBuzzerNotification(null), 3000);
                 }
+                if (team_a_players) setTeamAPlayers(team_a_players);
+                if (team_b_players) setTeamBPlayers(team_b_players);
             })
             .subscribe();
 
@@ -280,6 +286,8 @@ export default function MainGame() {
                     teamBName={teamBName}
                     setTeamAName={setTeamAName}
                     setTeamBName={setTeamBName}
+                    teamAPlayers={teamAPlayers}
+                    teamBPlayers={teamBPlayers}
                 />
             </div>
 

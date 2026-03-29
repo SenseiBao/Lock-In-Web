@@ -98,8 +98,16 @@ export default function GuesserPage() {
         }).eq('room_code', roomCode.toUpperCase());
     };
 
-    const handleJoin = () => {
-        if (playerName.trim() && selectedTeam) setJoined(true);
+    const handleJoin = async () => {
+        if (!playerName.trim() || !selectedTeam) return;
+        const col = selectedTeam === 'A' ? 'team_a_players' : 'team_b_players';
+        const existing = roomData?.[col] || [];
+        if (!existing.includes(playerName.trim())) {
+            await supabase.from('rooms').update({
+                [col]: [...existing, playerName.trim()],
+            }).eq('room_code', roomCode.toUpperCase());
+        }
+        setJoined(true);
     };
 
     if (loading) return (
