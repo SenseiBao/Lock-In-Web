@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 
-const COOLDOWN_SECONDS = 5;
+const COOLDOWN_SECONDS = 6;
 const RADIUS = 88;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
@@ -247,6 +247,12 @@ export default function GuesserPage() {
 
                 <p className="text-gray-600 text-xs font-bold uppercase tracking-widest text-center">
                     {playerName} · {selectedTeam === 'A' ? (roomData?.team_a_name || 'Team A') : (roomData?.team_b_name || 'Team B')}
+                </p>
+
+                <p className="text-gray-500 text-xs text-center max-w-[220px] leading-relaxed">
+                    {canBuzz
+                        ? 'Press the button when you\'re ready to make a guess!'
+                        : 'Wait for the cooldown before guessing again...'}
                 </p>
             </div>
 
