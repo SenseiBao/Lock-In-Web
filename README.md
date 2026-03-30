@@ -1,12 +1,12 @@
-# React + Vite
-
-This is a work in progress card game called lock-in, specifically the website version.  
-There is also a Java version that was developed before this.  
-Physical editions may be made later.  
-Currently deployed using Varcel: https://lock-in-web-kappa.vercel.app/
 # Lock-In (Web Version)
 
 A digital implementation of the stack-based card game **Lock-In**, built with React, Vite, and Tailwind CSS.
+
+> This is a work in progress. There is also a Java version developed prior to this. Physical editions may be made later.
+>
+> **Live at:** https://lock-in-web-kappa.vercel.app/
+
+---
 
 ## 🎮 Game Rules
 
@@ -15,29 +15,33 @@ A digital implementation of the stack-based card game **Lock-In**, built with Re
 * **Players:** 4+ players, divided into 2 teams.
 * **Roles:** 1 Describer and 1+ Guessers per team.
 * **Objective:** First team to capture the majority of the cards wins the game.
-* **Total Deck Size:** 25 cards per round (Or any arbitrary odd amount honestly).
+* **Total Deck Size:** 25 cards per round (or any arbitrary odd number).
 
 ---
 
 ### II. The Standard Turn Flow
-1.  **Choosing the Team to go first**
-    * Flip a coin. Whoever wins the flip gets to go first
-    * From this point onward, whichever team gives the first hint alternates
-2.  **The Draw**
-    * A card is drawn from the stack.
-    * Only the **Describers** from each team may look at it.
 
-3.  **The Activation Roll**
-    * Roll a single six-sided die (D6).
-    * **Roll 1–4:** Standard Round. No special constraints.
-    * **Roll 5–6:** Power-up Round. Roll the D6 again to determine which neutral constraint applies (see Section III).
+1. **Choosing the Team to Go First**
+   * Flip a coin. Whoever wins gets to give the first hint.
+   * From this point onward, which team gives the first hint alternates each round.
 
-4.  **The Clues**
-    * **Team A (The Coin Flip Winner):** The Describer gives a **single-word hint**. The Guesser makes a guess.
-    * **Team B:** If Team A is incorrect, the Team B Describer gives their own hint. Team B's Guesser now has the advantage of hearing *both* hints.
+2. **The Draw**
+   * A card is drawn from the stack.
+   * Only the **Describers** from each team may look at it.
+   * A **60-second round timer** starts automatically when the card is drawn. If time runs out before the word is guessed, the card is discarded — neither team scores.
 
-5.  **Escalation**
-    * If the card is not guessed after **3 failed hints from both sides** (6 total hints), the hint limit increases to **2 words** for all subsequent hints until the card is claimed.
+3. **The Activation Roll**
+   * Roll a single six-sided die (D6).
+   * **Roll 1–4:** Standard Round. No special constraints.
+   * **Roll 5–6:** Power-up Round. Roll the D6 again to determine which neutral constraint applies (see Section III).
+
+4. **The Clues**
+   * Teams alternate giving hints within the 60-second window.
+   * **Team A (The Coin Flip Winner):** The Describer gives a **single-word hint**. The Guesser makes a guess.
+   * **Team B:** If Team A is incorrect, the Team B Describer gives their own hint. Team B's Guesser now has the advantage of hearing *both* hints.
+
+5. **Escalation**
+   * If the card is not guessed after **3 failed hints from both sides** (6 total hints), the hint limit increases to **2 words** for all subsequent hints until the card is claimed.
 
 ---
 

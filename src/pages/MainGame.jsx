@@ -37,6 +37,7 @@ export default function MainGame() {
     const [hideWord, setHideWord] = useState(false);
     const [teamAName, setTeamAName] = useState('Team A');
     const [teamBName, setTeamBName] = useState('Team B');
+    const [drawKey, setDrawKey] = useState(0);
 
     // Room state
     const [roomCode, setRoomCode] = useState(null);
@@ -65,6 +66,7 @@ export default function MainGame() {
         setTimeout(() => {
             drawCard();
             setIsFlipped(true);
+            setDrawKey(k => k + 1);
         }, 200);
     };
 
@@ -321,7 +323,7 @@ export default function MainGame() {
                 {/* RIGHT COLUMN: TIMER */}
                 <div className="flex-1 flex justify-start items-center w-full">
                     <div className="w-full max-w-[280px]">
-                        <Timer />
+                        <Timer drawKey={drawKey} />
                     </div>
                 </div>
 

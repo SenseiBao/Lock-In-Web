@@ -1,38 +1,43 @@
 import { useState, useEffect } from 'react';
 
-export default function Timer() {
-    const [timerSeconds, setTimerSeconds] = useState(30);
+const TIMER_DURATION = 60;
+
+export default function Timer({ drawKey }) {
+    const [timerSeconds, setTimerSeconds] = useState(TIMER_DURATION);
     const [isTimerRunning, setIsTimerRunning] = useState(false);
 
+    // Auto-restart whenever a new card is drawn
     useEffect(() => {
-        let interval;
-        if (isTimerRunning && timerSeconds > 0) {
-            interval = setInterval(() => {
-                setTimerSeconds(prev => {
-                    if (prev <= 1) {
-                        setIsTimerRunning(false);
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-        }
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [isTimerRunning, timerSeconds]);
+        if (drawKey === 0) return;
+        setTimerSeconds(TIMER_DURATION);
+        setIsTimerRunning(true);
+    }, [drawKey]);
 
-    const handleTimerToggle = () => setIsTimerRunning(!isTimerRunning);
+    useEffect(() => {
+        if (!isTimerRunning) return;
+        const interval = setInterval(() => {
+            setTimerSeconds(prev => {
+                if (prev <= 1) {
+                    setIsTimerRunning(false);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [isTimerRunning]);
+
+    const handleTimerToggle = () => setIsTimerRunning(r => !r);
     const handleTimerReset = () => {
         setIsTimerRunning(false);
-        setTimerSeconds(30);
+        setTimerSeconds(TIMER_DURATION);
     };
 
     return (
         <div className="w-full max-w-md mx-auto mb-4 bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
             <div className="text-center mb-3">
                 <div className={`text-5xl font-black font-mono ${
-                    timerSeconds <= 5 && timerSeconds > 0 ? 'text-red-500 animate-pulse' :
+                    timerSeconds <= 10 && timerSeconds > 0 ? 'text-red-500 animate-pulse' :
                         timerSeconds === 0 ? 'text-red-600' :
                             'text-white'
                 }`}>
@@ -52,13 +57,13 @@ export default function Timer() {
                             : 'bg-point-green text-white hover:bg-point-green/80'
                     }`}
                 >
-                    {isTimerRunning ? '⏸️ Pause' : '▶️ Start'}
+                    {isTimerRunning ? '⏸ Pause' : '▶ Start'}
                 </button>
                 <button
                     onClick={handleTimerReset}
                     className="flex-1 bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-all text-sm"
                 >
-                    🔄 Reset
+                    ↺ Reset
                 </button>
             </div>
         </div>
