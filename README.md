@@ -28,7 +28,7 @@ A digital implementation of the stack-based card game **Lock-In**, built with Re
 2. **The Draw**
    * A card is drawn from the stack.
    * Only the **Describers** from each team may look at it.
-   * A **60-second round timer** starts automatically when the card is drawn. If time runs out before the word is guessed, the card is discarded — neither team scores.
+   * A **60-second round timer** starts automatically. If time runs out before the word is guessed, the card is discarded — neither team scores.
 
 3. **The Activation Roll**
    * Roll a single six-sided die (D6).
@@ -36,12 +36,9 @@ A digital implementation of the stack-based card game **Lock-In**, built with Re
    * **Roll 5–6:** Power-up Round. Roll the D6 again to determine which neutral constraint applies (see Section III).
 
 4. **The Clues**
-   * Teams alternate giving hints within the 60-second window.
-   * **Team A (The Coin Flip Winner):** The Describer gives a **single-word hint**. The Guesser makes a guess.
-   * **Team B:** If Team A is incorrect, the Team B Describer gives their own hint. Team B's Guesser now has the advantage of hearing *both* hints.
-
-5. **Escalation**
-   * If the card is not guessed after **3 failed hints from both sides** (6 total hints), the hint limit increases to **2 words** for all subsequent hints until the card is claimed.
+   * Describers alternate giving **one-word hints** back and forth within the 60-second window.
+   * Each guesser may attempt a guess after their team's hint.
+   * There is no escalation — hints remain one word for the entire round.
 
 ---
 
@@ -62,10 +59,9 @@ A digital implementation of the stack-based card game **Lock-In**, built with Re
 ### IV. Action Rules & Penalties
 
 #### Skips
-* Guessers have the option to **skip** a difficult card.
-* Describers **cannot** skip or pass.
+* **Describers** have the option to skip a difficult card at any time.
+* Both teams must agree to skip — once skipped, the card is discarded.
 
 #### The "Lock-In" Mechanic
 * Guessers can choose to **"Lock In"** a specific guess.
-* **Penalty:** If a "Locked In" guess is wrong, the opposing team is awarded a **Free Guess** immediately (no new hint given).
-* After the free
+* **Penalty:** If a "Locked In" guess is wrong, that guesser's buzzer is put on a **6-second cooldown** before they can buzz again.
