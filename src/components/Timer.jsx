@@ -2,6 +2,25 @@ import { useState, useEffect } from 'react';
 
 const TIMER_DURATION = 60;
 
+const playBuzzer = () => {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        // Three short descending beeps
+        [0, 0.18, 0.36].forEach((startOffset, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'square';
+            osc.frequency.value = 440 - i * 80;
+            gain.gain.setValueAtTime(0.3, ctx.currentTime + startOffset);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startOffset + 0.15);
+            osc.start(ctx.currentTime + startOffset);
+            osc.stop(ctx.currentTime + startOffset + 0.15);
+        });
+    } catch (_) {}
+};
+
 export default function Timer({ drawKey }) {
     const [timerSeconds, setTimerSeconds] = useState(TIMER_DURATION);
     const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -19,6 +38,7 @@ export default function Timer({ drawKey }) {
             setTimerSeconds(prev => {
                 if (prev <= 1) {
                     setIsTimerRunning(false);
+                    playBuzzer();
                     return 0;
                 }
                 return prev - 1;
