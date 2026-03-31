@@ -64,11 +64,11 @@ const INITIAL_WORDS = [
 ];
 
 const POWER_UPS = {
-    1: { name: "Whiteboard Challenge", desc: "Share a whiteboard. Describers take turns drawing one continuous stroke." },
+    1: { name: "Whiteboard Challenge", desc: "No words! Both Describers draw on their own whiteboards at the same time." },
     2: { name: "Simultaneous Charades", desc: "No words! Both Describers act out the word at the same time. Noises and sounds are allowed." },
     3: { name: "Low Bandwidth", desc: "Describers can only use one-syllable words for hints." },
     4: { name: "Data Corruption", desc: "Forbidden Letters! Roll again: 1=E, 2=T, 3=A, 4=O, 5=I, 6=N." },
-    5: { name: "High Traffic", desc: "Simultaneous Guessing: Both Describers hint and both Guessers shout." },
+    5: { name: "High Traffic", desc: "No alternating! Both Describers can give hints nonstop at the same time." },
     6: { name: "Reverse Roles", desc: "The Guesser now describes, the Describer now guesses! Draw a new card for this turn only." }
 };
 

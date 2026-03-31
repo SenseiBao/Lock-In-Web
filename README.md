@@ -50,11 +50,11 @@ A digital implementation of the stack-based card game **Lock-In**, built with Re
 
 | Roll | Power-Up | Description |
 | :---: | :--- | :--- |
-| **1** | **Whiteboard Challenge** | One whiteboard is shared. Describers take turns drawing **one continuous stroke** at a time until the word is guessed. (Time limit applies). |
+| **1** | **Whiteboard Challenge** | **No words!** Both Describers draw on their own whiteboards at the same time. |
 | **2** | **Simultaneous Charades** | **No words.** Both Describers act out the word at the same time. Noises and sounds are allowed. |
 | **3** | **Low Bandwidth** | Describers can only use **one-syllable words** for their hints. |
 | **4** | **Data Corruption** | A letter is automatically chosen and is **forbidden** from all hints:<br>1=**E**, 2=**T**, 3=**A**, 4=**O**, 5=**I**, 6=**N** |
-| **5** | **High Traffic** | **Simultaneous Guessing:** Both Describers hint and both Guessers shout out at the same time. 10-second cooldown enforced between guesses. |
+| **5** | **High Traffic** | **No alternating!** Both Describers can give hints nonstop at the same time. |
 | **6** | **Reverse Roles** | The Guesser now describes and the Describer now guesses. Draw a **new card** for this turn only. |
 
 ---
