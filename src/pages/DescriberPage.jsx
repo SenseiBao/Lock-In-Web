@@ -15,6 +15,11 @@ export default function DescriberPage() {
     const [selectedTeam, setSelectedTeam] = useState(null);
     const [joined, setJoined] = useState(false);
 
+    // Skip state
+    const [showSkipConfirm, setShowSkipConfirm] = useState(false);
+    const [skipNotification, setSkipNotification] = useState(null);
+    const prevSkipVotesRef = useRef([]);
+
     useEffect(() => {
         document.title = 'Lock-In · Describer';
         return () => { document.title = 'Lock-In'; };
@@ -58,17 +63,54 @@ export default function DescriberPage() {
         };
     }, [roomCode]);
 
+    // Show toast when another describer votes to skip
+    useEffect(() => {
+        if (!joined || !roomData) return;
+        const currentVotes = roomData.skip_votes || [];
+        const prevVotes = prevSkipVotesRef.current;
+        const newVoters = currentVotes.filter(v => !prevVotes.includes(v) && v !== playerName);
+        if (newVoters.length > 0) {
+            setSkipNotification(`${newVoters[0]} voted to skip`);
+            setTimeout(() => setSkipNotification(null), 3500);
+        }
+        prevSkipVotesRef.current = currentVotes;
+    }, [roomData?.skip_votes]);  // eslint-disable-line react-hooks/exhaustive-deps
+
     const handleJoin = async () => {
         if (!playerName.trim() || !selectedTeam) return;
+        const name = playerName.trim();
         const col = selectedTeam === 'A' ? 'team_a_players' : 'team_b_players';
         const existing = roomData?.[col] || [];
-        if (!existing.includes(playerName.trim())) {
-            await supabase.from('rooms').update({
-                [col]: [...existing, playerName.trim()],
-            }).eq('room_code', roomCode.toUpperCase());
+        const existingDescribers = roomData?.describer_names || [];
+
+        const updates = {};
+        if (!existing.includes(name)) {
+            updates[col] = [...existing, name];
+        }
+        if (!existingDescribers.includes(name)) {
+            updates.describer_names = [...existingDescribers, name];
+        }
+
+        if (Object.keys(updates).length > 0) {
+            await supabase.from('rooms').update(updates).eq('room_code', roomCode.toUpperCase());
         }
         setJoined(true);
     };
+
+    const handleSkipVote = async () => {
+        setShowSkipConfirm(false);
+        const currentVotes = roomData?.skip_votes || [];
+        if (currentVotes.includes(playerName)) return;
+        await supabase.from('rooms').update({
+            skip_votes: [...currentVotes, playerName],
+        }).eq('room_code', roomCode.toUpperCase());
+    };
+
+    const skipVotes = roomData?.skip_votes || [];
+    const describerNames = roomData?.describer_names || [];
+    const hasVotedSkip = skipVotes.includes(playerName);
+    const totalDescribers = describerNames.length;
+    const voteCount = skipVotes.length;
 
     if (loading) return (
         <div className="min-h-screen bg-dark-bg flex items-center justify-center">
@@ -135,7 +177,65 @@ export default function DescriberPage() {
     }
 
     return (
-        <div className="min-h-screen bg-dark-bg flex flex-col items-center justify-center p-8 font-sans gap-8">
+        <div className="min-h-screen bg-dark-bg flex flex-col items-center justify-center p-8 font-sans gap-8 relative">
+
+            {/* Skip vote toast notification */}
+            <AnimatePresence>
+                {skipNotification && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -30, x: '-50%' }}
+                        animate={{ opacity: 1, y: 0, x: '-50%' }}
+                        exit={{ opacity: 0, y: -30, x: '-50%' }}
+                        className="fixed top-6 left-1/2 bg-white/10 border border-white/20 backdrop-blur-sm text-white px-6 py-3 rounded-2xl font-bold text-sm z-50 shadow-2xl whitespace-nowrap"
+                    >
+                        ⏭️ {skipNotification}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Skip confirmation modal */}
+            <AnimatePresence>
+                {showSkipConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-6"
+                        onClick={() => setShowSkipConfirm(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.85, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.85, opacity: 0 }}
+                            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+                            className="bg-dark-bg border border-white/15 rounded-2xl p-8 flex flex-col items-center gap-5 shadow-2xl max-w-xs w-full"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <p className="text-3xl">⏭️</p>
+                            <div className="text-center">
+                                <h2 className="text-white font-black text-xl uppercase tracking-tight mb-2">Skip this card?</h2>
+                                <p className="text-gray-400 text-sm leading-relaxed">
+                                    All describers must agree to skip. A new card will only be drawn once everyone votes.
+                                </p>
+                            </div>
+                            <div className="flex gap-3 w-full">
+                                <button
+                                    onClick={() => setShowSkipConfirm(false)}
+                                    className="flex-1 py-3 rounded-xl font-bold border border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white transition-all text-sm uppercase tracking-wide"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSkipVote}
+                                    className="flex-1 py-3 rounded-xl font-black bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-all text-sm uppercase tracking-wide"
+                                >
+                                    Vote to Skip
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <p className="text-gray-600 text-[10px] font-bold tracking-widest uppercase">
                 🔑 {roomCode.toUpperCase()} · {playerName} · Describer ·{' '}
@@ -181,6 +281,46 @@ export default function DescriberPage() {
                         <p className="text-white text-xs leading-tight mt-1 font-medium italic">
                             {roomData.active_power_up.desc}
                         </p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Skip button + vote status */}
+            <AnimatePresence>
+                {roomData?.current_word && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="flex flex-col items-center gap-2"
+                    >
+                        {hasVotedSkip ? (
+                            <div className="flex flex-col items-center gap-1.5">
+                                <div className="flex items-center gap-2 text-gray-400 text-sm font-bold">
+                                    <span className="w-2 h-2 rounded-full bg-card-gold animate-pulse inline-block" />
+                                    Waiting for others…
+                                </div>
+                                {totalDescribers > 1 && (
+                                    <p className="text-gray-600 text-xs font-bold uppercase tracking-widest">
+                                        {voteCount} / {totalDescribers} voted to skip
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setShowSkipConfirm(true)}
+                                className="px-6 py-2.5 rounded-xl font-bold border border-white/15 text-gray-400 hover:border-white/30 hover:text-white transition-all text-sm uppercase tracking-widest"
+                            >
+                                Skip Card
+                            </button>
+                        )}
+
+                        {/* Show who else voted */}
+                        {skipVotes.length > 0 && !hasVotedSkip && (
+                            <p className="text-gray-600 text-xs font-medium">
+                                {skipVotes.filter(v => v !== playerName).join(', ')} voted to skip
+                            </p>
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>

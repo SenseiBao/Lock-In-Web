@@ -46,6 +46,10 @@ export default function MainGame() {
     const [qrModal, setQrModal] = useState(null); // 'describe' | 'join' | null
     const [teamAPlayers, setTeamAPlayers] = useState([]);
     const [teamBPlayers, setTeamBPlayers] = useState([]);
+    const [skipVotes, setSkipVotes] = useState([]);
+    const [describerNames, setDescriberNames] = useState([]);
+    const [allVotedToSkip, setAllVotedToSkip] = useState(false);
+    const [skipNotification, setSkipNotification] = useState(null);
     const channelRef = useRef(null);
 
     const [playDraw1] = useSound(drawSfx1);
@@ -68,6 +72,11 @@ export default function MainGame() {
             setIsFlipped(true);
             setDrawKey(k => k + 1);
         }, 200);
+        // Clear skip votes whenever a new card is drawn
+        if (roomCode) {
+            supabase.from('rooms').update({ skip_votes: [] }).eq('room_code', roomCode);
+        }
+        setSkipVotes([]);
     };
 
     const handleWin = (isTeamA) => {
@@ -91,6 +100,8 @@ export default function MainGame() {
             active_power_up: activePowerUp,
             team_a_players: [],
             team_b_players: [],
+            describer_names: [],
+            skip_votes: [],
         });
         if (!error) setRoomCode(code);
         setIsCreatingRoom(false);
@@ -125,7 +136,7 @@ export default function MainGame() {
                 table: 'rooms',
                 filter: `room_code=eq.${roomCode}`,
             }, (payload) => {
-                const { buzzer_locked_by, buzzer_locked_at, team_a_players, team_b_players } = payload.new;
+                const { buzzer_locked_by, buzzer_locked_at, team_a_players, team_b_players, skip_votes: newSkipVotes, describer_names: newDescriberNames } = payload.new;
                 const prevTime = payload.old?.buzzer_locked_at;
                 if (buzzer_locked_by && buzzer_locked_at !== prevTime) {
                     setBuzzerNotification(buzzer_locked_by);
@@ -133,6 +144,25 @@ export default function MainGame() {
                 }
                 if (team_a_players) setTeamAPlayers(team_a_players);
                 if (team_b_players) setTeamBPlayers(team_b_players);
+                if (newDescriberNames) setDescriberNames(newDescriberNames);
+                if (newSkipVotes) {
+                    setSkipVotes(newSkipVotes);
+                    // Show notification for each new voter
+                    const prevVotes = payload.old?.skip_votes || [];
+                    const newVoters = newSkipVotes.filter(v => !prevVotes.includes(v));
+                    if (newVoters.length > 0) {
+                        const resolvedNames = newDescriberNames || [];
+                        const total = resolvedNames.length;
+                        const count = newSkipVotes.length;
+                        setSkipNotification(`⏭️ ${newVoters[0]} voted to skip (${count}/${total})`);
+                        setTimeout(() => setSkipNotification(null), 3500);
+                    }
+                    // Trigger auto-draw when all describers have voted
+                    const resolvedNames = newDescriberNames || [];
+                    if (resolvedNames.length > 0 && newSkipVotes.length >= resolvedNames.length) {
+                        setAllVotedToSkip(true);
+                    }
+                }
             })
             .subscribe();
 
@@ -140,6 +170,13 @@ export default function MainGame() {
             if (channelRef.current) supabase.removeChannel(channelRef.current);
         };
     }, [roomCode]);
+
+    // Auto-draw when all describers have voted to skip
+    useEffect(() => {
+        if (!allVotedToSkip || !roomCode) return;
+        setAllVotedToSkip(false);
+        handleDraw();
+    }, [allVotedToSkip]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const getLink = (type) => `${window.location.origin}/${type}/${roomCode}`;
 
@@ -198,6 +235,20 @@ export default function MainGame() {
                         className="fixed top-6 left-1/2 bg-pass-orange text-dark-bg px-8 py-3 rounded-2xl font-black text-lg z-50 shadow-2xl"
                     >
                         🔔 {buzzerNotification} buzzed in!
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Skip vote notification */}
+            <AnimatePresence>
+                {skipNotification && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 30, x: '-50%' }}
+                        animate={{ opacity: 1, y: 0, x: '-50%' }}
+                        exit={{ opacity: 0, y: 30, x: '-50%' }}
+                        className="fixed bottom-8 left-1/2 bg-white/10 border border-white/20 backdrop-blur-sm text-white px-6 py-3 rounded-2xl font-bold text-sm z-50 shadow-2xl whitespace-nowrap"
+                    >
+                        {skipNotification}
                     </motion.div>
                 )}
             </AnimatePresence>
