@@ -51,6 +51,8 @@ export default function MainGame() {
     const [allVotedToSkip, setAllVotedToSkip] = useState(false);
     const [skipNotification, setSkipNotification] = useState(null);
     const channelRef = useRef(null);
+    // Guard: prevents re-triggering a skip draw while one is already in progress
+    const skipInProgressRef = useRef(false);
 
     const [playDraw1] = useSound(drawSfx1);
     const [playDraw2] = useSound(drawSfx2);
@@ -73,10 +75,11 @@ export default function MainGame() {
             setDrawKey(k => k + 1);
         }, 200);
         // Clear skip votes whenever a new card is drawn
+        skipInProgressRef.current = false;
+        setSkipVotes([]);
         if (roomCode) {
             supabase.from('rooms').update({ skip_votes: [] }).eq('room_code', roomCode);
         }
-        setSkipVotes([]);
     };
 
     const handleWin = (isTeamA) => {
@@ -147,20 +150,26 @@ export default function MainGame() {
                 if (newDescriberNames) setDescriberNames(newDescriberNames);
                 if (newSkipVotes) {
                     setSkipVotes(newSkipVotes);
-                    // Show notification for each new voter
-                    const prevVotes = payload.old?.skip_votes || [];
-                    const newVoters = newSkipVotes.filter(v => !prevVotes.includes(v));
-                    if (newVoters.length > 0) {
-                        const resolvedNames = newDescriberNames || [];
-                        const total = resolvedNames.length;
-                        const count = newSkipVotes.length;
-                        setSkipNotification(`⏭️ ${newVoters[0]} voted to skip (${count}/${total})`);
-                        setTimeout(() => setSkipNotification(null), 3500);
-                    }
-                    // Trigger auto-draw when all describers have voted
                     const resolvedNames = newDescriberNames || [];
-                    if (resolvedNames.length > 0 && newSkipVotes.length >= resolvedNames.length) {
-                        setAllVotedToSkip(true);
+
+                    if (newSkipVotes.length === 0) {
+                        // Votes were cleared (new card drawn) — reset guard
+                        skipInProgressRef.current = false;
+                    } else {
+                        // Show notification for each new voter
+                        const prevVotes = payload.old?.skip_votes || [];
+                        const newVoters = newSkipVotes.filter(v => !prevVotes.includes(v));
+                        if (newVoters.length > 0) {
+                            const total = resolvedNames.length;
+                            const count = newSkipVotes.length;
+                            setSkipNotification(`⏭️ ${newVoters[0]} voted to skip (${count}/${total})`);
+                            setTimeout(() => setSkipNotification(null), 3500);
+                        }
+                        // Trigger auto-draw only once per skip round
+                        if (resolvedNames.length > 0 && newSkipVotes.length >= resolvedNames.length && !skipInProgressRef.current) {
+                            skipInProgressRef.current = true;
+                            setAllVotedToSkip(true);
+                        }
                     }
                 }
             })
