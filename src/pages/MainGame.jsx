@@ -53,6 +53,9 @@ export default function MainGame() {
     const channelRef = useRef(null);
     // Guard: prevents re-triggering a skip draw while one is already in progress
     const skipInProgressRef = useRef(false);
+    // Flag: merges skip_votes clear into the next sync effect update atomically
+    const pendingSkipClearRef = useRef(false);
+    const [linkCopied, setLinkCopied] = useState(false);
 
     const [playDraw1] = useSound(drawSfx1);
     const [playDraw2] = useSound(drawSfx2);
@@ -74,12 +77,10 @@ export default function MainGame() {
             setIsFlipped(true);
             setDrawKey(k => k + 1);
         }, 200);
-        // Clear skip votes whenever a new card is drawn
+        // Mark that the next sync update should also clear skip_votes atomically
         skipInProgressRef.current = false;
+        pendingSkipClearRef.current = true;
         setSkipVotes([]);
-        if (roomCode) {
-            supabase.from('rooms').update({ skip_votes: [] }).eq('room_code', roomCode);
-        }
     };
 
     const handleWin = (isTeamA) => {
@@ -114,7 +115,7 @@ export default function MainGame() {
     useEffect(() => {
         if (!roomCode) return;
         const sync = async () => {
-            await supabase.from('rooms').update({
+            const update = {
                 current_word: currentWord,
                 team_a_score: teamAScore,
                 team_b_score: teamBScore,
@@ -122,7 +123,14 @@ export default function MainGame() {
                 team_b_name: teamBName,
                 active_power_up: activePowerUp,
                 updated_at: new Date().toISOString(),
-            }).eq('room_code', roomCode);
+            };
+            // Merge skip_votes clear atomically with the word update so clients
+            // always receive both changes in one payload — no race condition.
+            if (pendingSkipClearRef.current) {
+                update.skip_votes = [];
+                pendingSkipClearRef.current = false;
+            }
+            await supabase.from('rooms').update(update).eq('room_code', roomCode);
         };
         sync();
     }, [roomCode, currentWord, teamAScore, teamBScore, teamAName, teamBName, activePowerUp]);
@@ -148,7 +156,7 @@ export default function MainGame() {
                 if (team_a_players) setTeamAPlayers(team_a_players);
                 if (team_b_players) setTeamBPlayers(team_b_players);
                 if (newDescriberNames) setDescriberNames(newDescriberNames);
-                if (newSkipVotes) {
+                if (Array.isArray(newSkipVotes)) {
                     setSkipVotes(newSkipVotes);
                     const resolvedNames = newDescriberNames || [];
 
@@ -224,7 +232,17 @@ export default function MainGame() {
                                 {getLink(qrModal)}
                             </p>
                             <button
-                                onClick={() => setQrModal(null)}
+                                onClick={() => {
+                                    navigator.clipboard.writeText(getLink(qrModal));
+                                    setLinkCopied(true);
+                                    setTimeout(() => setLinkCopied(false), 2000);
+                                }}
+                                className="w-full py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all bg-dark-bg text-white hover:bg-gray-800"
+                            >
+                                {linkCopied ? '✓ Copied!' : 'Copy Link'}
+                            </button>
+                            <button
+                                onClick={() => { setQrModal(null); setLinkCopied(false); }}
                                 className="text-gray-500 text-xs font-bold uppercase tracking-widest hover:text-dark-bg transition-colors"
                             >
                                 Close
