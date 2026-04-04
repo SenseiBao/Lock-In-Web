@@ -86,7 +86,7 @@ export default function MainGame() {
     const handleWin = (isTeamA) => {
         playRandomPointSound();
         recordWin(isTeamA);
-        setIsFlipped(false);
+        handleDraw();
     };
 
     // Create a Supabase room
