@@ -21,7 +21,7 @@ function App() {
         teamAWords,
         teamBWords,
         drawCard,
-        recordWin,
+        recordTeamWin,
         diceResult,
         isRolling,
         rollDice,
@@ -83,7 +83,7 @@ function App() {
 
     const handleWin = (isTeamA) => {
         playRandomPointSound();
-        recordWin(isTeamA);
+        recordTeamWin(isTeamA);
         setIsFlipped(false);
     };
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
+import { GAME_MODES } from '../hooks/useGameLogic';
 
 export default function DescriberPage() {
     const { roomCode } = useParams();
@@ -76,16 +77,21 @@ export default function DescriberPage() {
         prevSkipVotesRef.current = currentVotes;
     }, [roomData?.skip_votes]);  // eslint-disable-line react-hooks/exhaustive-deps
 
+    const isSolo = roomData?.game_mode === GAME_MODES.SOLO;
+
     const handleJoin = async () => {
-        if (!playerName.trim() || !selectedTeam) return;
+        if (!playerName.trim()) return;
+        if (!isSolo && !selectedTeam) return;
         const name = playerName.trim();
-        const col = selectedTeam === 'A' ? 'team_a_players' : 'team_b_players';
-        const existing = roomData?.[col] || [];
         const existingDescribers = roomData?.describer_names || [];
 
         const updates = {};
-        if (!existing.includes(name)) {
-            updates[col] = [...existing, name];
+        if (!isSolo) {
+            const col = selectedTeam === 'A' ? 'team_a_players' : 'team_b_players';
+            const existing = roomData?.[col] || [];
+            if (!existing.includes(name)) {
+                updates[col] = [...existing, name];
+            }
         }
         if (!existingDescribers.includes(name)) {
             updates.describer_names = [...existingDescribers, name];
@@ -146,28 +152,30 @@ export default function DescriberPage() {
                     className="bg-white/5 border border-white/20 rounded-xl px-5 py-3 text-white text-center font-bold w-full max-w-xs outline-none focus:border-card-gold transition-colors placeholder-gray-600"
                 />
 
-                <div className="flex gap-3 w-full max-w-xs">
-                    {[
-                        { key: 'A', name: roomData?.team_a_name || 'Team A' },
-                        { key: 'B', name: roomData?.team_b_name || 'Team B' },
-                    ].map(({ key, name }) => (
-                        <button
-                            key={key}
-                            onClick={() => setSelectedTeam(key)}
-                            className={`flex-1 py-3 rounded-xl font-bold border transition-all text-sm uppercase tracking-wide ${
-                                selectedTeam === key
-                                    ? 'bg-card-gold text-dark-bg border-card-gold'
-                                    : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'
-                            }`}
-                        >
-                            {name}
-                        </button>
-                    ))}
-                </div>
+                {!isSolo && (
+                    <div className="flex gap-3 w-full max-w-xs">
+                        {[
+                            { key: 'A', name: roomData?.team_a_name || 'Team A' },
+                            { key: 'B', name: roomData?.team_b_name || 'Team B' },
+                        ].map(({ key, name }) => (
+                            <button
+                                key={key}
+                                onClick={() => setSelectedTeam(key)}
+                                className={`flex-1 py-3 rounded-xl font-bold border transition-all text-sm uppercase tracking-wide ${
+                                    selectedTeam === key
+                                        ? 'bg-card-gold text-dark-bg border-card-gold'
+                                        : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'
+                                }`}
+                            >
+                                {name}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 <button
                     onClick={handleJoin}
-                    disabled={!playerName.trim() || !selectedTeam}
+                    disabled={!playerName.trim() || (!isSolo && !selectedTeam)}
                     className="w-full max-w-xs bg-card-gold text-dark-bg font-black py-4 rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-40 disabled:scale-100 text-lg uppercase tracking-widest"
                 >
                     Join as Describer
@@ -239,7 +247,7 @@ export default function DescriberPage() {
 
             <p className="text-gray-600 text-[10px] font-bold tracking-widest uppercase">
                 🔑 {roomCode.toUpperCase()} · {playerName} · Describer ·{' '}
-                {selectedTeam === 'A' ? (roomData?.team_a_name || 'Team A') : (roomData?.team_b_name || 'Team B')}
+                {isSolo ? 'Co-op' : (selectedTeam === 'A' ? (roomData?.team_a_name || 'Team A') : (roomData?.team_b_name || 'Team B'))}
             </p>
 
             {/* Word */}
@@ -326,21 +334,31 @@ export default function DescriberPage() {
             </AnimatePresence>
 
             {/* Scores */}
-            <div className="flex gap-10 text-center">
-                <div>
+            {isSolo ? (
+                <div className="text-center">
                     <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">
-                        {roomData?.team_a_name || 'Team A'}
+                        {roomData?.team_a_name || 'Co-op run'}
                     </p>
-                    <p className="text-point-green text-4xl font-black">{roomData?.team_a_score ?? 0}</p>
+                    <p className="text-point-green text-4xl font-black">{roomData?.solo_score ?? 0}</p>
+                    <p className="text-gray-600 text-[10px] font-bold uppercase tracking-widest mt-1">words</p>
                 </div>
-                <div className="text-gray-700 text-4xl font-black self-center">—</div>
-                <div>
-                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">
-                        {roomData?.team_b_name || 'Team B'}
-                    </p>
-                    <p className="text-point-green text-4xl font-black">{roomData?.team_b_score ?? 0}</p>
+            ) : (
+                <div className="flex gap-10 text-center">
+                    <div>
+                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">
+                            {roomData?.team_a_name || 'Team A'}
+                        </p>
+                        <p className="text-point-green text-4xl font-black">{roomData?.team_a_score ?? 0}</p>
+                    </div>
+                    <div className="text-gray-700 text-4xl font-black self-center">—</div>
+                    <div>
+                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">
+                            {roomData?.team_b_name || 'Team B'}
+                        </p>
+                        <p className="text-point-green text-4xl font-black">{roomData?.team_b_score ?? 0}</p>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

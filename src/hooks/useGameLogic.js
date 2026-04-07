@@ -63,6 +63,13 @@ const INITIAL_WORDS = [
     "AMNESIA", "BRAINSTORM", "WANDERLUST", "STALE", "MUMBLE", "REGRET", "ASIAN", "BLACK", "RIZZ",
 ];
 
+export const GAME_MODES = {
+    /** Two teams, two describers, race to majority of the deck */
+    TEAMS: 'teams',
+    /** One describer; everyone cooperates for a high score */
+    SOLO: 'solo',
+};
+
 const POWER_UPS = {
     1: { name: "Whiteboard Challenge", desc: "No words! Both Describers draw on their own whiteboards at the same time." },
     2: { name: "Simultaneous Charades", desc: "No words! Both Describers act out the word at the same time. Noises and sounds are allowed." },
@@ -72,10 +79,22 @@ const POWER_UPS = {
     6: { name: "Reverse Roles", desc: "The Guesser now describes, the Describer now guesses! Draw a new card for this turn only." }
 };
 
+/** Shown when digital dice hits a power-up in solo (co-op) mode */
+const SOLO_POWER_UPS = {
+    1: { name: "Whiteboard Challenge", desc: "No words! Draw the word on a whiteboard." },
+    2: { name: "Charades", desc: "No words! Act out the word. Noises and sounds are allowed." },
+    3: { name: "Low Bandwidth", desc: "You can only use one-syllable words for hints." },
+    4: { name: "Data Corruption", desc: "Forbidden Letters! Roll again: 1=E, 2=T, 3=A, 4=O, 5=I, 6=N." },
+    5: { name: "Rapid Fire", desc: "Give one-word hints as fast as you want — no need to wait." },
+    6: { name: "Wild Card", desc: "Draw a new card for this round only (same describer)." }
+};
+
 /* -------------------- */
 /* Game Logic Hook      */
 /* -------------------- */
 export const useGameLogic = () => {
+
+    const [gameMode, setGameMode] = useState(GAME_MODES.TEAMS);
 
     const [deck, setDeck] = useState(() => shuffle(INITIAL_WORDS));
     const [currentWord, setCurrentWord] = useState(null);
@@ -85,6 +104,9 @@ export const useGameLogic = () => {
 
     const [teamAWords, setTeamAWords] = useState([]);
     const [teamBWords, setTeamBWords] = useState([]);
+
+    const [soloScore, setSoloScore] = useState(0);
+    const [soloWords, setSoloWords] = useState([]);
 
     const [diceResult, setDiceResult] = useState(null);
     const [isRolling, setIsRolling] = useState(false);
@@ -105,15 +127,15 @@ export const useGameLogic = () => {
         setIsRolling(true);
         setActivePowerUp(null);
 
+        const table = gameMode === GAME_MODES.SOLO ? SOLO_POWER_UPS : POWER_UPS;
+
         setTimeout(() => {
             const roll = Math.floor(Math.random() * 6) + 1;
             setDiceResult(roll);
 
             // Trigger power-up on 5 or 6
             if (roll === 5 || roll === 6) {
-                if (!activePowerUp) {
-                    playPowerUp();
-                }
+                playPowerUp();
                 const powerRoll = Math.floor(Math.random() * 6) + 1;
 
                 if (powerRoll === 4) {
@@ -121,11 +143,11 @@ export const useGameLogic = () => {
                     const letterRoll = Math.floor(Math.random() * 6) + 1;
                     const letter = FORBIDDEN_LETTERS[letterRoll];
                     setActivePowerUp({
-                        ...POWER_UPS[4],
+                        ...table[4],
                         desc: `Forbidden letter: "${letter}". No hints may contain the letter ${letter}.`
                     });
                 } else {
-                    setActivePowerUp(POWER_UPS[powerRoll]);
+                    setActivePowerUp(table[powerRoll]);
                 }
             }
 
@@ -155,7 +177,7 @@ export const useGameLogic = () => {
     /* -------------------- */
     /* Record Win           */
     /* -------------------- */
-    const recordWin = (isTeamA) => {
+    const recordTeamWin = (isTeamA) => {
         if (!currentWord) return;
 
         const word = currentWord;
@@ -172,6 +194,16 @@ export const useGameLogic = () => {
         setPhase("resolved");
     };
 
+    const recordSoloWin = () => {
+        if (!currentWord) return;
+
+        const word = currentWord;
+        setSoloScore(prev => prev + 1);
+        setSoloWords(prev => [...prev, word]);
+        setCurrentWord(null);
+        setPhase("resolved");
+    };
+
     /* -------------------- */
     /* Reset Game           */
     /* -------------------- */
@@ -181,6 +213,8 @@ export const useGameLogic = () => {
         setTeamBScore(0);
         setTeamAWords([]);
         setTeamBWords([]);
+        setSoloScore(0);
+        setSoloWords([]);
         setCurrentWord(null);
         setDiceResult(null);
         setPhase("idle");
@@ -191,18 +225,23 @@ export const useGameLogic = () => {
     /* Win Condition        */
     /* -------------------- */
     const winner =
-        teamAScore >= 13 ? "A" :
-            teamBScore >= 13 ? "B" :
-                null;
+        gameMode !== GAME_MODES.TEAMS ? null :
+            teamAScore >= 13 ? "A" :
+                teamBScore >= 13 ? "B" :
+                    null;
 
     return {
         // state
+        gameMode,
+        setGameMode,
         currentWord,
         deckCount: deck.length,
         teamAScore,
         teamBScore,
         teamAWords,
         teamBWords,
+        soloScore,
+        soloWords,
         diceResult,
         isRolling,
         activePowerUp,
@@ -211,7 +250,8 @@ export const useGameLogic = () => {
 
         // actions
         drawCard,
-        recordWin,
+        recordTeamWin,
+        recordSoloWin,
         resetGame,
         rollDice,
         setPhase

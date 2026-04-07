@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import useSound from 'use-sound';
 import { AnimatePresence, motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
-import { useGameLogic } from '../hooks/useGameLogic';
+import { useGameLogic, GAME_MODES } from '../hooks/useGameLogic';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 // --- COMPONENTS ---
@@ -27,8 +27,10 @@ const generateRoomCode = () => {
 
 export default function MainGame() {
     const {
+        gameMode, setGameMode,
         currentWord, teamAScore, teamBScore, teamAWords, teamBWords,
-        drawCard, recordWin, diceResult, isRolling, rollDice, activePowerUp
+        soloScore, soloWords,
+        drawCard, recordTeamWin, recordSoloWin, resetGame, diceResult, isRolling, rollDice, activePowerUp,
     } = useGameLogic();
 
     const [isFlipped, setIsFlipped] = useState(false);
@@ -83,9 +85,19 @@ export default function MainGame() {
         setSkipVotes([]);
     };
 
+    const changeGameMode = (next) => {
+        if (next === gameMode) return;
+        resetGame();
+        setGameMode(next);
+    };
+
     const handleWin = (isTeamA) => {
         playRandomPointSound();
-        recordWin(isTeamA);
+        if (gameMode === GAME_MODES.SOLO) {
+            recordSoloWin();
+        } else {
+            recordTeamWin(isTeamA);
+        }
         handleDraw();
     };
 
@@ -106,6 +118,9 @@ export default function MainGame() {
             team_b_players: [],
             describer_names: [],
             skip_votes: [],
+            game_mode: gameMode,
+            solo_score: soloScore,
+            solo_words: soloWords,
         });
         if (!error) setRoomCode(code);
         setIsCreatingRoom(false);
@@ -122,6 +137,9 @@ export default function MainGame() {
                 team_a_name: teamAName,
                 team_b_name: teamBName,
                 active_power_up: activePowerUp,
+                game_mode: gameMode,
+                solo_score: soloScore,
+                solo_words: soloWords,
                 updated_at: new Date().toISOString(),
             };
             // Merge skip_votes clear atomically with the word update so clients
@@ -133,7 +151,7 @@ export default function MainGame() {
             await supabase.from('rooms').update(update).eq('room_code', roomCode);
         };
         sync();
-    }, [roomCode, currentWord, teamAScore, teamBScore, teamAName, teamBName, activePowerUp]);
+    }, [roomCode, currentWord, teamAScore, teamBScore, teamAName, teamBName, activePowerUp, gameMode, soloScore, soloWords]);
 
     // Subscribe to buzzer presses from guessers
     useEffect(() => {
@@ -286,6 +304,40 @@ export default function MainGame() {
                     LOCK-IN
                 </h1>
 
+                {/* GAME MODE */}
+                <div className="flex flex-col items-center gap-2 mb-4">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Game mode</span>
+                    <div className="flex rounded-xl border border-white/15 overflow-hidden bg-white/5 p-0.5">
+                        <button
+                            type="button"
+                            onClick={() => changeGameMode(GAME_MODES.TEAMS)}
+                            className={`px-4 py-2 text-[11px] font-black uppercase tracking-tight rounded-lg transition-all ${
+                                gameMode === GAME_MODES.TEAMS
+                                    ? 'bg-card-gold text-dark-bg shadow-lg'
+                                    : 'text-gray-400 hover:text-white'
+                            }`}
+                        >
+                            Two teams
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => changeGameMode(GAME_MODES.SOLO)}
+                            className={`px-4 py-2 text-[11px] font-black uppercase tracking-tight rounded-lg transition-all ${
+                                gameMode === GAME_MODES.SOLO
+                                    ? 'bg-card-gold text-dark-bg shadow-lg'
+                                    : 'text-gray-400 hover:text-white'
+                            }`}
+                        >
+                            Co-op run
+                        </button>
+                    </div>
+                    <p className="text-gray-600 text-[10px] max-w-xs text-center leading-relaxed">
+                        {gameMode === GAME_MODES.TEAMS
+                            ? 'Two describers (one per team) — teams race to capture the deck.'
+                            : 'One describer — guessers work together to score as many words as possible.'}
+                    </p>
+                </div>
+
                 {/* TOGGLES */}
                 <div className="flex flex-col md:flex-row items-center justify-center gap-6 mb-4">
                     <div className="flex items-center justify-center gap-3">
@@ -358,6 +410,7 @@ export default function MainGame() {
                 )}
 
                 <ScoreBoard
+                    gameMode={gameMode}
                     teamAScore={teamAScore}
                     teamBScore={teamBScore}
                     teamAWords={teamAWords}
@@ -368,6 +421,8 @@ export default function MainGame() {
                     setTeamBName={setTeamBName}
                     teamAPlayers={teamAPlayers}
                     teamBPlayers={teamBPlayers}
+                    soloScore={soloScore}
+                    soloWords={soloWords}
                 />
             </div>
 
@@ -417,14 +472,23 @@ export default function MainGame() {
                 <button onClick={handleDraw} className="w-full bg-card-gold text-dark-bg text-2xl font-black py-4 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(212,175,55,0.3)]">
                     DRAW CARD
                 </button>
-                <div className="flex gap-3">
-                    <button onClick={() => handleWin(true)} className="flex-1 bg-point-green/10 text-point-green border border-point-green/40 font-bold py-3 rounded-xl hover:bg-point-green hover:text-dark-bg transition-all text-sm uppercase">
-                        {teamAName} +1
+                {gameMode === GAME_MODES.SOLO ? (
+                    <button
+                        onClick={() => handleWin()}
+                        className="w-full bg-point-green/10 text-point-green border border-point-green/40 font-black py-4 rounded-xl hover:bg-point-green hover:text-dark-bg transition-all text-base uppercase tracking-[0.2em]"
+                    >
+                        Correct — +1
                     </button>
-                    <button onClick={() => handleWin(false)} className="flex-1 bg-point-green/10 text-point-green border border-point-green/40 font-bold py-3 rounded-xl hover:bg-point-green hover:text-dark-bg transition-all text-sm uppercase">
-                        {teamBName} +1
-                    </button>
-                </div>
+                ) : (
+                    <div className="flex gap-3">
+                        <button onClick={() => handleWin(true)} className="flex-1 bg-point-green/10 text-point-green border border-point-green/40 font-bold py-3 rounded-xl hover:bg-point-green hover:text-dark-bg transition-all text-sm uppercase">
+                            {teamAName} +1
+                        </button>
+                        <button onClick={() => handleWin(false)} className="flex-1 bg-point-green/10 text-point-green border border-point-green/40 font-bold py-3 rounded-xl hover:bg-point-green hover:text-dark-bg transition-all text-sm uppercase">
+                            {teamBName} +1
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

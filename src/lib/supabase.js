@@ -23,6 +23,9 @@ import { createClient } from '@supabase/supabase-js';
  *   alter table rooms add column if not exists team_b_players jsonb default '[]';
  *   alter table rooms add column if not exists describer_names jsonb default '[]';
  *   alter table rooms add column if not exists skip_votes jsonb default '[]';
+ *   alter table rooms add column if not exists game_mode text default 'teams';
+ *   alter table rooms add column if not exists solo_score integer default 0;
+ *   alter table rooms add column if not exists solo_words jsonb default '[]';
  *
  *   alter table rooms enable row level security;
  *   create policy "Allow all" on rooms for all using (true) with check (true);

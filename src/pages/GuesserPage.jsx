@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
+import { GAME_MODES } from '../hooks/useGameLogic';
 
 const COOLDOWN_SECONDS = 6;
 const RADIUS = 88;
@@ -87,10 +88,13 @@ export default function GuesserPage() {
             });
         }, 1000);
 
+        const isSolo = roomData?.game_mode === GAME_MODES.SOLO;
         const teamName = selectedTeam === 'A'
             ? (roomData?.team_a_name || 'Team A')
             : (roomData?.team_b_name || 'Team B');
-        const buzzerLabel = `${playerName.trim() || 'Player'} (${teamName})`;
+        const buzzerLabel = isSolo
+            ? (playerName.trim() || 'Player')
+            : `${playerName.trim() || 'Player'} (${teamName})`;
 
         await supabase.from('rooms').update({
             buzzer_locked_by: buzzerLabel,
@@ -98,14 +102,27 @@ export default function GuesserPage() {
         }).eq('room_code', roomCode.toUpperCase());
     };
 
+    const isSoloJoin = roomData?.game_mode === GAME_MODES.SOLO;
+
     const handleJoin = async () => {
-        if (!playerName.trim() || !selectedTeam) return;
-        const col = selectedTeam === 'A' ? 'team_a_players' : 'team_b_players';
-        const existing = roomData?.[col] || [];
-        if (!existing.includes(playerName.trim())) {
-            await supabase.from('rooms').update({
-                [col]: [...existing, playerName.trim()],
-            }).eq('room_code', roomCode.toUpperCase());
+        if (!playerName.trim()) return;
+        if (!isSoloJoin && !selectedTeam) return;
+        const name = playerName.trim();
+        if (isSoloJoin) {
+            const existing = roomData?.team_a_players || [];
+            if (!existing.includes(name)) {
+                await supabase.from('rooms').update({
+                    team_a_players: [...existing, name],
+                }).eq('room_code', roomCode.toUpperCase());
+            }
+        } else {
+            const col = selectedTeam === 'A' ? 'team_a_players' : 'team_b_players';
+            const existing = roomData?.[col] || [];
+            if (!existing.includes(name)) {
+                await supabase.from('rooms').update({
+                    [col]: [...existing, name],
+                }).eq('room_code', roomCode.toUpperCase());
+            }
         }
         setJoined(true);
     };
@@ -144,28 +161,30 @@ export default function GuesserPage() {
                     className="bg-white/5 border border-white/20 rounded-xl px-5 py-3 text-white text-center font-bold w-full max-w-xs outline-none focus:border-card-gold transition-colors placeholder-gray-600"
                 />
 
-                <div className="flex gap-3 w-full max-w-xs">
-                    {[
-                        { key: 'A', name: roomData?.team_a_name || 'Team A' },
-                        { key: 'B', name: roomData?.team_b_name || 'Team B' },
-                    ].map(({ key, name }) => (
-                        <button
-                            key={key}
-                            onClick={() => setSelectedTeam(key)}
-                            className={`flex-1 py-3 rounded-xl font-bold border transition-all text-sm uppercase tracking-wide ${
-                                selectedTeam === key
-                                    ? 'bg-point-green text-dark-bg border-point-green'
-                                    : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'
-                            }`}
-                        >
-                            {name}
-                        </button>
-                    ))}
-                </div>
+                {!isSoloJoin && (
+                    <div className="flex gap-3 w-full max-w-xs">
+                        {[
+                            { key: 'A', name: roomData?.team_a_name || 'Team A' },
+                            { key: 'B', name: roomData?.team_b_name || 'Team B' },
+                        ].map(({ key, name }) => (
+                            <button
+                                key={key}
+                                onClick={() => setSelectedTeam(key)}
+                                className={`flex-1 py-3 rounded-xl font-bold border transition-all text-sm uppercase tracking-wide ${
+                                    selectedTeam === key
+                                        ? 'bg-point-green text-dark-bg border-point-green'
+                                        : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'
+                                }`}
+                            >
+                                {name}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 <button
                     onClick={handleJoin}
-                    disabled={!playerName.trim() || !selectedTeam}
+                    disabled={!playerName.trim() || (!isSoloJoin && !selectedTeam)}
                     className="w-full max-w-xs bg-card-gold text-dark-bg font-black py-4 rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-40 disabled:scale-100 text-lg uppercase tracking-widest"
                 >
                     Join
@@ -182,21 +201,31 @@ export default function GuesserPage() {
         <div className="min-h-screen bg-dark-bg flex flex-col items-center justify-between py-10 px-8 font-sans">
 
             {/* Scores */}
-            <div className="flex gap-10 text-center">
-                <div>
+            {roomData?.game_mode === GAME_MODES.SOLO ? (
+                <div className="text-center">
                     <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">
-                        {roomData?.team_a_name || 'Team A'}
+                        {roomData?.team_a_name || 'Co-op run'}
                     </p>
-                    <p className="text-point-green text-4xl font-black">{roomData?.team_a_score ?? 0}</p>
+                    <p className="text-point-green text-4xl font-black">{roomData?.solo_score ?? 0}</p>
+                    <p className="text-gray-600 text-[10px] font-bold uppercase tracking-widest mt-1">words</p>
                 </div>
-                <div className="text-gray-700 text-4xl font-black self-center">—</div>
-                <div>
-                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">
-                        {roomData?.team_b_name || 'Team B'}
-                    </p>
-                    <p className="text-point-green text-4xl font-black">{roomData?.team_b_score ?? 0}</p>
+            ) : (
+                <div className="flex gap-10 text-center">
+                    <div>
+                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">
+                            {roomData?.team_a_name || 'Team A'}
+                        </p>
+                        <p className="text-point-green text-4xl font-black">{roomData?.team_a_score ?? 0}</p>
+                    </div>
+                    <div className="text-gray-700 text-4xl font-black self-center">—</div>
+                    <div>
+                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">
+                            {roomData?.team_b_name || 'Team B'}
+                        </p>
+                        <p className="text-point-green text-4xl font-black">{roomData?.team_b_score ?? 0}</p>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Power-up */}
             <AnimatePresence>
@@ -259,7 +288,10 @@ export default function GuesserPage() {
                 </div>
 
                 <p className="text-gray-600 text-xs font-bold uppercase tracking-widest text-center">
-                    {playerName} · {selectedTeam === 'A' ? (roomData?.team_a_name || 'Team A') : (roomData?.team_b_name || 'Team B')}
+                    {playerName}
+                    {roomData?.game_mode !== GAME_MODES.SOLO && (
+                        <> · {selectedTeam === 'A' ? (roomData?.team_a_name || 'Team A') : (roomData?.team_b_name || 'Team B')}</>
+                    )}
                 </p>
 
                 <p className="text-gray-500 text-xs text-center max-w-[220px] leading-relaxed">
