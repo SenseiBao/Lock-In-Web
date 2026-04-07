@@ -27,6 +27,8 @@ import { createClient } from '@supabase/supabase-js';
  *   alter table rooms add column if not exists solo_score integer default 0;
  *   alter table rooms add column if not exists solo_words jsonb default '[]';
  *   alter table rooms add column if not exists solo_free_skips_remaining integer default 2;
+ *   alter table rooms add column if not exists describer_correct_at timestamptz;
+ *   alter table rooms add column if not exists describer_correct_by text;
  *
  *   alter table rooms enable row level security;
  *   create policy "Allow all" on rooms for all using (true) with check (true);

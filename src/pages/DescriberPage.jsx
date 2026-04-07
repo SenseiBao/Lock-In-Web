@@ -112,6 +112,14 @@ export default function DescriberPage() {
         }).eq('room_code', roomCode.toUpperCase());
     };
 
+    const handleCoopCorrect = async () => {
+        if (!isSolo || !roomData?.current_word) return;
+        await supabase.from('rooms').update({
+            describer_correct_at: new Date().toISOString(),
+            describer_correct_by: playerName.trim(),
+        }).eq('room_code', roomCode.toUpperCase());
+    };
+
     const skipVotes = roomData?.skip_votes || [];
     const describerNames = roomData?.describer_names || [];
     const hasVotedSkip = skipVotes.includes(playerName);
@@ -295,6 +303,29 @@ export default function DescriberPage() {
                         </h3>
                         <p className="text-white text-xs leading-tight mt-1 font-medium italic">
                             {roomData.active_power_up.desc}
+                        </p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Co-op: mark guess correct (same as host +1) */}
+            <AnimatePresence>
+                {isSolo && roomData?.current_word && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="w-full max-w-xs"
+                    >
+                        <button
+                            type="button"
+                            onClick={handleCoopCorrect}
+                            className="w-full bg-point-green/15 text-point-green border-2 border-point-green/50 font-black py-3.5 rounded-xl hover:bg-point-green hover:text-dark-bg transition-all text-sm uppercase tracking-[0.15em] shadow-[0_0_20px_rgba(34,197,94,0.15)]"
+                        >
+                            Correct — +1
+                        </button>
+                        <p className="text-gray-600 text-[10px] text-center mt-2 font-medium leading-relaxed">
+                            When the table guesses the word, tap here (same as the host).
                         </p>
                     </motion.div>
                 )}

@@ -57,7 +57,22 @@ export default function MainGame() {
     const skipInProgressRef = useRef(false);
     // Flag: merges skip_votes clear into the next sync effect update atomically
     const pendingSkipClearRef = useRef(false);
+    const pendingDescriberCorrectClearRef = useRef(false);
+    const lastDescriberCorrectAtRef = useRef(null);
+    const gameModeRef = useRef(gameMode);
+    const currentWordRef = useRef(currentWord);
+    const coopCorrectHandlersRef = useRef({ playRandomPointSound: () => {}, recordSoloWin: () => {}, handleDraw: () => {} });
     const [linkCopied, setLinkCopied] = useState(false);
+
+    useEffect(() => {
+        gameModeRef.current = gameMode;
+    }, [gameMode]);
+    useEffect(() => {
+        currentWordRef.current = currentWord;
+    }, [currentWord]);
+    useEffect(() => {
+        lastDescriberCorrectAtRef.current = null;
+    }, [roomCode]);
 
     const [playDraw1] = useSound(drawSfx1);
     const [playDraw2] = useSound(drawSfx2);
@@ -100,6 +115,10 @@ export default function MainGame() {
         }
         handleDraw();
     };
+
+    useEffect(() => {
+        coopCorrectHandlersRef.current = { playRandomPointSound, recordSoloWin, handleDraw };
+    }, [playRandomPointSound, recordSoloWin, handleDraw]);
 
     // Create a Supabase room
     const createRoom = async () => {
@@ -150,6 +169,11 @@ export default function MainGame() {
                 update.skip_votes = [];
                 pendingSkipClearRef.current = false;
             }
+            if (pendingDescriberCorrectClearRef.current) {
+                update.describer_correct_at = null;
+                update.describer_correct_by = null;
+                pendingDescriberCorrectClearRef.current = false;
+            }
             await supabase.from('rooms').update(update).eq('room_code', roomCode);
         };
         sync();
@@ -167,10 +191,37 @@ export default function MainGame() {
                 table: 'rooms',
                 filter: `room_code=eq.${roomCode}`,
             }, (payload) => {
-                const { buzzer_locked_by, buzzer_locked_at, team_a_players, team_b_players, skip_votes: newSkipVotes, describer_names: newDescriberNames } = payload.new;
+                const {
+                    buzzer_locked_by,
+                    buzzer_locked_at,
+                    team_a_players,
+                    team_b_players,
+                    skip_votes: newSkipVotes,
+                    describer_names: newDescriberNames,
+                    describer_correct_at,
+                    describer_correct_by,
+                } = payload.new;
                 const prevTime = payload.old?.buzzer_locked_at;
                 if (buzzer_locked_by && buzzer_locked_at !== prevTime) {
                     setBuzzerNotification(buzzer_locked_by);
+                    setTimeout(() => setBuzzerNotification(null), 3000);
+                }
+                const prevCorrectAt = payload.old?.describer_correct_at;
+                if (
+                    describer_correct_at &&
+                    describer_correct_at !== prevCorrectAt &&
+                    payload.new?.game_mode === GAME_MODES.SOLO
+                ) {
+                    if (lastDescriberCorrectAtRef.current === describer_correct_at) return;
+                    if (gameModeRef.current !== GAME_MODES.SOLO || !currentWordRef.current) return;
+                    lastDescriberCorrectAtRef.current = describer_correct_at;
+                    const h = coopCorrectHandlersRef.current;
+                    h.playRandomPointSound();
+                    h.recordSoloWin();
+                    h.handleDraw();
+                    pendingDescriberCorrectClearRef.current = true;
+                    const label = describer_correct_by ? `✓ ${describer_correct_by} marked correct` : '✓ Describer marked correct';
+                    setBuzzerNotification(label);
                     setTimeout(() => setBuzzerNotification(null), 3000);
                 }
                 if (team_a_players) setTeamAPlayers(team_a_players);
@@ -284,7 +335,9 @@ export default function MainGame() {
                         exit={{ opacity: 0, y: -30, x: '-50%' }}
                         className="fixed top-6 left-1/2 bg-pass-orange text-dark-bg px-8 py-3 rounded-2xl font-black text-lg z-50 shadow-2xl"
                     >
-                        🔔 {buzzerNotification} buzzed in!
+                        {buzzerNotification.startsWith('✓')
+                            ? buzzerNotification
+                            : `🔔 ${buzzerNotification} buzzed in!`}
                     </motion.div>
                 )}
             </AnimatePresence>
