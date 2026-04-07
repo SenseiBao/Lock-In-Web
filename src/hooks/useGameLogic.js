@@ -74,9 +74,10 @@ export const GAME_MODES = {
 export const COOP_FREE_SKIPS = 2;
 
 /** Shared co-op countdown (wall-clock end stored in `coop_timer_end_at`) */
-export const COOP_TIMER_INITIAL_SECONDS = 90;
-export const COOP_TIMER_CORRECT_BONUS_SEC = 20;
+export const COOP_TIMER_INITIAL_SECONDS = 120;
+export const COOP_TIMER_CORRECT_BONUS_SEC = 40;
 export const COOP_TIMER_BUZZ_PENALTY_SEC = 5;
+export const COOP_HINT_PENALTY_SEC = 3;
 
 const POWER_UPS = {
     1: { name: "Whiteboard Challenge", desc: "No words! Both Describers draw on their own whiteboards at the same time." },
@@ -93,8 +94,8 @@ const SOLO_POWER_UPS = {
     2: { name: "Charades", desc: "No words! Act out the word. Noises and sounds are allowed." },
     3: { name: "Low Bandwidth", desc: "You can only use one-syllable words for hints." },
     4: { name: "Data Corruption", desc: "Forbidden Letters! Roll again: 1=E, 2=T, 3=A, 4=O, 5=I, 6=N." },
-    5: { name: "Rapid Fire", desc: "Give one-word hints as fast as you want — no need to wait." },
-    6: { name: "Wild Card", desc: "Draw a new card for this round only (same describer)." }
+    5: { name: "Rapid Fire", desc: "Give hints as fast as you want — no penalty for giving hints this round." },
+    6: { name: "Reverse Roles", desc: "Reverse roles: a guesser gives hints, the describer guesses." }
 };
 
 /* -------------------- */

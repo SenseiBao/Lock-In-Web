@@ -43,7 +43,7 @@ export default function CoopTimer({ endAt, compact = false }) {
                 {formatRemaining(displaySec)}
             </div>
             <p className="text-[9px] text-gray-600 mt-1 leading-tight">
-                Correct +20s · Buzz −5s
+                Correct +40s · Buzz −5s · Hint −3s
             </p>
         </div>
     );

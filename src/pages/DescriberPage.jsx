@@ -18,6 +18,8 @@ export default function DescriberPage() {
     const [joined, setJoined] = useState(false);
     const [joinError, setJoinError] = useState(null);
     const [startGameBusy, setStartGameBusy] = useState(false);
+    const [buzzNotification, setBuzzNotification] = useState(null);
+    const lastBuzzAtRef = useRef(null);
 
     // Skip state
     const [showSkipConfirm, setShowSkipConfirm] = useState(false);
@@ -57,6 +59,17 @@ export default function DescriberPage() {
                     filter: `room_code=eq.${code}`,
                 }, (payload) => {
                     setRoomData(payload.new);
+                    const prevAt = payload.old?.buzzer_locked_at;
+                    const nextAt = payload.new?.buzzer_locked_at;
+                    const nextBy = payload.new?.buzzer_locked_by;
+                    // Realtime often omits payload.old; guard with a ref as well.
+                    if (nextAt && nextAt !== prevAt && lastBuzzAtRef.current !== nextAt) {
+                        lastBuzzAtRef.current = nextAt;
+                        if (nextBy) {
+                            setBuzzNotification(nextBy);
+                            setTimeout(() => setBuzzNotification(null), 2500);
+                        }
+                    }
                 })
                 .subscribe();
         };
@@ -150,6 +163,13 @@ export default function DescriberPage() {
         await supabase.from('rooms').update({
             describer_correct_at: new Date().toISOString(),
             describer_correct_by: playerName.trim(),
+        }).eq('room_code', roomCode.toUpperCase());
+    };
+
+    const handleCoopHint = async () => {
+        if (!isSolo || !roomData?.current_word) return;
+        await supabase.from('rooms').update({
+            coop_hint_tick: new Date().toISOString(),
         }).eq('room_code', roomCode.toUpperCase());
     };
 
@@ -276,6 +296,20 @@ export default function DescriberPage() {
                 )}
             </AnimatePresence>
 
+            {/* Buzzer notification (co-op + teams) */}
+            <AnimatePresence>
+                {buzzNotification && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -30, x: '-50%' }}
+                        animate={{ opacity: 1, y: 0, x: '-50%' }}
+                        exit={{ opacity: 0, y: -30, x: '-50%' }}
+                        className="fixed top-16 left-1/2 bg-pass-orange text-dark-bg px-6 py-2.5 rounded-2xl font-black text-sm z-50 shadow-2xl whitespace-nowrap"
+                    >
+                        🔔 {buzzNotification} buzzed in!
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Skip confirmation modal */}
             <AnimatePresence>
                 {showSkipConfirm && (
@@ -393,6 +427,16 @@ export default function DescriberPage() {
                         </button>
                         <p className="text-gray-600 text-[10px] text-center mt-2 font-medium leading-relaxed">
                             When the table guesses the word, tap here (same as the host).
+                        </p>
+                        <button
+                            type="button"
+                            onClick={handleCoopHint}
+                            className="w-full mt-3 bg-red-500/10 text-red-400 border-2 border-red-500/40 font-black py-4 rounded-xl hover:bg-red-500 hover:text-dark-bg transition-all text-sm uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(239,68,68,0.12)]"
+                        >
+                            Hint given — −3s
+                        </button>
+                        <p className="text-gray-600 text-[10px] text-center mt-2 font-medium leading-relaxed">
+                            Tap this each time you say a hint word (co-op only).
                         </p>
                     </motion.div>
                 )}

@@ -8,6 +8,7 @@ import {
     COOP_TIMER_INITIAL_SECONDS,
     COOP_TIMER_CORRECT_BONUS_SEC,
     COOP_TIMER_BUZZ_PENALTY_SEC,
+    COOP_HINT_PENALTY_SEC,
 } from '../hooks/useGameLogic';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
@@ -73,6 +74,7 @@ export default function MainGame() {
     const handleDrawRef = useRef(() => {});
     /** Realtime often omits payload.old — dedupe buzzer + co-op timer penalty per unique buzzer_locked_at */
     const lastHostBuzzerAtRef = useRef(null);
+    const lastCoopHintTickRef = useRef(null);
     const lastCoopStartProcessedRef = useRef(null);
     const pendingCoopStartClearRef = useRef(false);
     const [coopTimerEndAt, setCoopTimerEndAt] = useState(null);
@@ -87,6 +89,7 @@ export default function MainGame() {
     useEffect(() => {
         lastDescriberCorrectAtRef.current = null;
         lastHostBuzzerAtRef.current = null;
+        lastCoopHintTickRef.current = null;
         lastCoopStartProcessedRef.current = null;
     }, [roomCode]);
 
@@ -196,6 +199,7 @@ export default function MainGame() {
             solo_free_skips_remaining: soloFreeSkipsRemaining,
             coop_timer_end_at: gameMode === GAME_MODES.SOLO ? coopTimerEndAt : null,
             coop_start_requested_at: null,
+            coop_hint_tick: null,
         });
         if (!error) {
             setRoomCode(code);
@@ -263,6 +267,7 @@ export default function MainGame() {
                     describer_names: newDescriberNames,
                     describer_correct_at,
                     describer_correct_by,
+                    coop_hint_tick,
                 } = payload.new;
                 const coopStartAt = payload.new?.coop_start_requested_at;
                 if (
@@ -288,6 +293,15 @@ export default function MainGame() {
                             coopTimerAdjustRef.current.sub(COOP_TIMER_BUZZ_PENALTY_SEC);
                         }
                     }
+                }
+
+                if (
+                    coop_hint_tick &&
+                    payload.new?.game_mode === GAME_MODES.SOLO &&
+                    lastCoopHintTickRef.current !== coop_hint_tick
+                ) {
+                    lastCoopHintTickRef.current = coop_hint_tick;
+                    coopTimerAdjustRef.current.sub(COOP_HINT_PENALTY_SEC);
                 }
                 const prevCorrectAt = payload.old?.describer_correct_at;
                 if (
@@ -476,7 +490,7 @@ export default function MainGame() {
                     <p className="text-gray-600 text-[10px] max-w-xs text-center leading-relaxed">
                         {gameMode === GAME_MODES.TEAMS
                             ? 'Two describers (one per team) — teams race to capture the deck.'
-                            : 'Shared 90s timer: correct +20s, buzz −5s. One describer; guessers score together.'}
+                            : 'Shared 2m timer: correct +40s, buzz −5s, hint −3s. One describer; guessers score together.'}
                     </p>
                 </div>
 
