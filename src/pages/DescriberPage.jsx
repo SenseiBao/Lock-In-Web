@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
-import { GAME_MODES } from '../hooks/useGameLogic';
+import { GAME_MODES, COOP_FREE_SKIPS } from '../hooks/useGameLogic';
 
 export default function DescriberPage() {
     const { roomCode } = useParams();
@@ -225,6 +225,13 @@ export default function DescriberPage() {
                                 <p className="text-gray-400 text-sm leading-relaxed">
                                     All describers must agree to skip. A new card will only be drawn once everyone votes.
                                 </p>
+                                {isSolo && (
+                                    <p className="text-pass-orange/90 text-xs leading-relaxed mt-3 font-semibold">
+                                        Co-op: {(roomData?.solo_free_skips_remaining ?? COOP_FREE_SKIPS) > 0
+                                            ? `${roomData?.solo_free_skips_remaining ?? COOP_FREE_SKIPS} free skip${(roomData?.solo_free_skips_remaining ?? COOP_FREE_SKIPS) === 1 ? '' : 's'} left this run, then −1 pt per skip.`
+                                            : 'No free skips left — this skip will cost the run 1 point.'}
+                                    </p>
+                                )}
                             </div>
                             <div className="flex gap-3 w-full">
                                 <button
@@ -315,12 +322,21 @@ export default function DescriberPage() {
                                 )}
                             </div>
                         ) : (
-                            <button
-                                onClick={() => setShowSkipConfirm(true)}
-                                className="px-6 py-2.5 rounded-xl font-bold border border-white/15 text-gray-400 hover:border-white/30 hover:text-white transition-all text-sm uppercase tracking-widest"
-                            >
-                                Skip Card
-                            </button>
+                            <div className="flex flex-col items-center gap-1.5">
+                                {isSolo && (
+                                    <p className="text-gray-600 text-[10px] font-bold uppercase tracking-widest text-center max-w-[280px]">
+                                        {(roomData?.solo_free_skips_remaining ?? COOP_FREE_SKIPS) > 0
+                                            ? `${roomData?.solo_free_skips_remaining ?? COOP_FREE_SKIPS} free skip${(roomData?.solo_free_skips_remaining ?? COOP_FREE_SKIPS) === 1 ? '' : 's'} left`
+                                            : 'Skips: −1 pt each'}
+                                    </p>
+                                )}
+                                <button
+                                    onClick={() => setShowSkipConfirm(true)}
+                                    className="px-6 py-2.5 rounded-xl font-bold border border-white/15 text-gray-400 hover:border-white/30 hover:text-white transition-all text-sm uppercase tracking-widest"
+                                >
+                                    Skip Card
+                                </button>
+                            </div>
                         )}
 
                         {/* Show who else voted */}

@@ -1,10 +1,10 @@
-import { GAME_MODES } from '../hooks/useGameLogic';
+import { GAME_MODES, COOP_FREE_SKIPS } from '../hooks/useGameLogic';
 
 export default function ScoreBoard({
     gameMode = GAME_MODES.TEAMS,
     teamAScore, teamBScore, teamAWords, teamBWords, teamAName, teamBName, setTeamAName, setTeamBName,
     teamAPlayers = [], teamBPlayers = [],
-    soloScore = 0, soloWords = [],
+    soloScore = 0, soloWords = [], soloFreeSkipsRemaining = COOP_FREE_SKIPS,
 }) {
     if (gameMode === GAME_MODES.SOLO) {
         return (
@@ -19,6 +19,11 @@ export default function ScoreBoard({
                         />
                         <p className="text-point-green text-4xl font-black">{soloScore}</p>
                         <p className="text-gray-600 text-[10px] font-bold uppercase tracking-widest mt-1">words guessed</p>
+                        <p className="text-gray-500 text-[10px] mt-2 leading-snug">
+                            {soloFreeSkipsRemaining > 0
+                                ? `${soloFreeSkipsRemaining} free skip${soloFreeSkipsRemaining === 1 ? '' : 's'} left · then −1 pt each`
+                                : 'Skips cost −1 pt each'}
+                        </p>
                         {teamAPlayers.length > 0 && (
                             <div className="mt-2 flex flex-wrap justify-center gap-1">
                                 <span className="text-[9px] text-gray-500 uppercase tracking-tighter w-full mb-0.5">Guessers</span>

@@ -70,6 +70,9 @@ export const GAME_MODES = {
     SOLO: 'solo',
 };
 
+/** Co-op mode: skips after this many cost 1 point each (score floored at 0) */
+export const COOP_FREE_SKIPS = 2;
+
 const POWER_UPS = {
     1: { name: "Whiteboard Challenge", desc: "No words! Both Describers draw on their own whiteboards at the same time." },
     2: { name: "Simultaneous Charades", desc: "No words! Both Describers act out the word at the same time. Noises and sounds are allowed." },
@@ -107,6 +110,8 @@ export const useGameLogic = () => {
 
     const [soloScore, setSoloScore] = useState(0);
     const [soloWords, setSoloWords] = useState([]);
+    /** Remaining no-penalty skips in co-op; when 0, each completed skip costs 1 point */
+    const [soloFreeSkipsRemaining, setSoloFreeSkipsRemaining] = useState(COOP_FREE_SKIPS);
 
     const [diceResult, setDiceResult] = useState(null);
     const [isRolling, setIsRolling] = useState(false);
@@ -204,6 +209,15 @@ export const useGameLogic = () => {
         setPhase("resolved");
     };
 
+    /** Call when describers complete a skip in co-op (host draws next card). First COOP_FREE_SKIPS are free; then −1 pt each. */
+    const recordCoopSkip = useCallback(() => {
+        setSoloFreeSkipsRemaining((prevFree) => {
+            if (prevFree > 0) return prevFree - 1;
+            setSoloScore((s) => Math.max(0, s - 1));
+            return 0;
+        });
+    }, []);
+
     /* -------------------- */
     /* Reset Game           */
     /* -------------------- */
@@ -215,6 +229,7 @@ export const useGameLogic = () => {
         setTeamBWords([]);
         setSoloScore(0);
         setSoloWords([]);
+        setSoloFreeSkipsRemaining(COOP_FREE_SKIPS);
         setCurrentWord(null);
         setDiceResult(null);
         setPhase("idle");
@@ -242,6 +257,7 @@ export const useGameLogic = () => {
         teamBWords,
         soloScore,
         soloWords,
+        soloFreeSkipsRemaining,
         diceResult,
         isRolling,
         activePowerUp,
@@ -252,6 +268,7 @@ export const useGameLogic = () => {
         drawCard,
         recordTeamWin,
         recordSoloWin,
+        recordCoopSkip,
         resetGame,
         rollDice,
         setPhase

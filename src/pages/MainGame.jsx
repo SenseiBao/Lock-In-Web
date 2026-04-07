@@ -29,8 +29,8 @@ export default function MainGame() {
     const {
         gameMode, setGameMode,
         currentWord, teamAScore, teamBScore, teamAWords, teamBWords,
-        soloScore, soloWords,
-        drawCard, recordTeamWin, recordSoloWin, resetGame, diceResult, isRolling, rollDice, activePowerUp,
+        soloScore, soloWords, soloFreeSkipsRemaining,
+        drawCard, recordTeamWin, recordSoloWin, recordCoopSkip, resetGame, diceResult, isRolling, rollDice, activePowerUp,
     } = useGameLogic();
 
     const [isFlipped, setIsFlipped] = useState(false);
@@ -121,6 +121,7 @@ export default function MainGame() {
             game_mode: gameMode,
             solo_score: soloScore,
             solo_words: soloWords,
+            solo_free_skips_remaining: soloFreeSkipsRemaining,
         });
         if (!error) setRoomCode(code);
         setIsCreatingRoom(false);
@@ -140,6 +141,7 @@ export default function MainGame() {
                 game_mode: gameMode,
                 solo_score: soloScore,
                 solo_words: soloWords,
+                solo_free_skips_remaining: soloFreeSkipsRemaining,
                 updated_at: new Date().toISOString(),
             };
             // Merge skip_votes clear atomically with the word update so clients
@@ -151,7 +153,7 @@ export default function MainGame() {
             await supabase.from('rooms').update(update).eq('room_code', roomCode);
         };
         sync();
-    }, [roomCode, currentWord, teamAScore, teamBScore, teamAName, teamBName, activePowerUp, gameMode, soloScore, soloWords]);
+    }, [roomCode, currentWord, teamAScore, teamBScore, teamAName, teamBName, activePowerUp, gameMode, soloScore, soloWords, soloFreeSkipsRemaining]);
 
     // Subscribe to buzzer presses from guessers
     useEffect(() => {
@@ -210,6 +212,9 @@ export default function MainGame() {
     useEffect(() => {
         if (!allVotedToSkip || !roomCode) return;
         setAllVotedToSkip(false);
+        if (gameMode === GAME_MODES.SOLO) {
+            recordCoopSkip();
+        }
         handleDraw();
     }, [allVotedToSkip]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -423,6 +428,7 @@ export default function MainGame() {
                     teamBPlayers={teamBPlayers}
                     soloScore={soloScore}
                     soloWords={soloWords}
+                    soloFreeSkipsRemaining={soloFreeSkipsRemaining}
                 />
             </div>
 
