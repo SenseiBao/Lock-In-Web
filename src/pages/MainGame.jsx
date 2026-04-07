@@ -70,6 +70,11 @@ export default function MainGame() {
     const currentWordRef = useRef(currentWord);
     const coopCorrectHandlersRef = useRef({ playRandomPointSound: () => {}, recordSoloWin: () => {}, handleDraw: () => {} });
     const coopTimerAdjustRef = useRef({ add: () => {}, sub: () => {} });
+    const handleDrawRef = useRef(() => {});
+    /** Realtime often omits payload.old — dedupe buzzer + co-op timer penalty per unique buzzer_locked_at */
+    const lastHostBuzzerAtRef = useRef(null);
+    const lastCoopStartProcessedRef = useRef(null);
+    const pendingCoopStartClearRef = useRef(false);
     const [coopTimerEndAt, setCoopTimerEndAt] = useState(null);
     const [linkCopied, setLinkCopied] = useState(false);
 
@@ -81,6 +86,8 @@ export default function MainGame() {
     }, [currentWord]);
     useEffect(() => {
         lastDescriberCorrectAtRef.current = null;
+        lastHostBuzzerAtRef.current = null;
+        lastCoopStartProcessedRef.current = null;
     }, [roomCode]);
 
     const [playDraw1] = useSound(drawSfx1);
@@ -108,6 +115,10 @@ export default function MainGame() {
         pendingSkipClearRef.current = true;
         setSkipVotes([]);
     };
+
+    useEffect(() => {
+        handleDrawRef.current = handleDraw;
+    }, [handleDraw]);
 
     const addCoopTimerSeconds = useCallback((delta) => {
         setCoopTimerEndAt((prev) => {
@@ -184,6 +195,7 @@ export default function MainGame() {
             solo_words: soloWords,
             solo_free_skips_remaining: soloFreeSkipsRemaining,
             coop_timer_end_at: gameMode === GAME_MODES.SOLO ? coopTimerEndAt : null,
+            coop_start_requested_at: null,
         });
         if (!error) {
             setRoomCode(code);
@@ -221,6 +233,10 @@ export default function MainGame() {
                 update.describer_correct_by = null;
                 pendingDescriberCorrectClearRef.current = false;
             }
+            if (pendingCoopStartClearRef.current) {
+                update.coop_start_requested_at = null;
+                pendingCoopStartClearRef.current = false;
+            }
             await supabase.from('rooms').update(update).eq('room_code', roomCode);
         };
         sync();
@@ -248,12 +264,29 @@ export default function MainGame() {
                     describer_correct_at,
                     describer_correct_by,
                 } = payload.new;
-                const prevTime = payload.old?.buzzer_locked_at;
-                if (buzzer_locked_by && buzzer_locked_at !== prevTime) {
-                    setBuzzerNotification(buzzer_locked_by);
-                    setTimeout(() => setBuzzerNotification(null), 3000);
-                    if (payload.new?.game_mode === GAME_MODES.SOLO) {
-                        coopTimerAdjustRef.current.sub(COOP_TIMER_BUZZ_PENALTY_SEC);
+                const coopStartAt = payload.new?.coop_start_requested_at;
+                if (
+                    coopStartAt &&
+                    lastCoopStartProcessedRef.current !== coopStartAt &&
+                    payload.new?.game_mode === GAME_MODES.SOLO
+                ) {
+                    lastCoopStartProcessedRef.current = coopStartAt;
+                    if (gameModeRef.current === GAME_MODES.SOLO && !currentWordRef.current) {
+                        handleDrawRef.current();
+                    }
+                    pendingCoopStartClearRef.current = true;
+                }
+
+                if (buzzer_locked_by && buzzer_locked_at) {
+                    if (lastHostBuzzerAtRef.current === buzzer_locked_at) {
+                        // Same buzz as last processed — duplicate event (Realtime often omits payload.old)
+                    } else {
+                        lastHostBuzzerAtRef.current = buzzer_locked_at;
+                        setBuzzerNotification(buzzer_locked_by);
+                        setTimeout(() => setBuzzerNotification(null), 3000);
+                        if (payload.new?.game_mode === GAME_MODES.SOLO) {
+                            coopTimerAdjustRef.current.sub(COOP_TIMER_BUZZ_PENALTY_SEC);
+                        }
                     }
                 }
                 const prevCorrectAt = payload.old?.describer_correct_at;

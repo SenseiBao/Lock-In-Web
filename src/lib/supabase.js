@@ -30,6 +30,7 @@ import { createClient } from '@supabase/supabase-js';
  *   alter table rooms add column if not exists describer_correct_at timestamptz;
  *   alter table rooms add column if not exists describer_correct_by text;
  *   alter table rooms add column if not exists coop_timer_end_at timestamptz;
+ *   alter table rooms add column if not exists coop_start_requested_at timestamptz;
  *
  *   alter table rooms enable row level security;
  *   create policy "Allow all" on rooms for all using (true) with check (true);

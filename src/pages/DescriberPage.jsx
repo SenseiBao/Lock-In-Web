@@ -16,6 +16,8 @@ export default function DescriberPage() {
     const [playerName, setPlayerName] = useState('');
     const [selectedTeam, setSelectedTeam] = useState(null);
     const [joined, setJoined] = useState(false);
+    const [joinError, setJoinError] = useState(null);
+    const [startGameBusy, setStartGameBusy] = useState(false);
 
     // Skip state
     const [showSkipConfirm, setShowSkipConfirm] = useState(false);
@@ -84,12 +86,29 @@ export default function DescriberPage() {
         if (!playerName.trim()) return;
         if (!isSolo && !selectedTeam) return;
         const name = playerName.trim();
-        const existingDescribers = roomData?.describer_names || [];
+        setJoinError(null);
+
+        const { data: fresh, error: fetchErr } = await supabase
+            .from('rooms')
+            .select('describer_names, game_mode, team_a_players, team_b_players')
+            .eq('room_code', roomCode.toUpperCase())
+            .single();
+
+        if (fetchErr || !fresh) {
+            setJoinError('Could not load room. Try again.');
+            return;
+        }
+
+        const existingDescribers = fresh.describer_names || [];
+        if (fresh.game_mode === GAME_MODES.SOLO && existingDescribers.length >= 1 && !existingDescribers.includes(name)) {
+            setJoinError('This co-op room already has a describer. Use the guesser link to play.');
+            return;
+        }
 
         const updates = {};
         if (!isSolo) {
             const col = selectedTeam === 'A' ? 'team_a_players' : 'team_b_players';
-            const existing = roomData?.[col] || [];
+            const existing = fresh[col] || [];
             if (!existing.includes(name)) {
                 updates[col] = [...existing, name];
             }
@@ -99,9 +118,22 @@ export default function DescriberPage() {
         }
 
         if (Object.keys(updates).length > 0) {
-            await supabase.from('rooms').update(updates).eq('room_code', roomCode.toUpperCase());
+            const { error: upErr } = await supabase.from('rooms').update(updates).eq('room_code', roomCode.toUpperCase());
+            if (upErr) {
+                setJoinError('Could not join. Try again.');
+                return;
+            }
         }
         setJoined(true);
+    };
+
+    const handleStartGame = async () => {
+        if (!isSolo || startGameBusy) return;
+        setStartGameBusy(true);
+        await supabase.from('rooms').update({
+            coop_start_requested_at: new Date().toISOString(),
+        }).eq('room_code', roomCode.toUpperCase());
+        setTimeout(() => setStartGameBusy(false), 2500);
     };
 
     const handleSkipVote = async () => {
@@ -126,6 +158,10 @@ export default function DescriberPage() {
     const hasVotedSkip = skipVotes.includes(playerName);
     const totalDescribers = describerNames.length;
     const voteCount = skipVotes.length;
+    const soloDescriberSlotTaken =
+        isSolo &&
+        describerNames.length >= 1 &&
+        !describerNames.includes(playerName.trim());
 
     if (loading) return (
         <div className="min-h-screen bg-dark-bg flex items-center justify-center">
@@ -151,15 +187,25 @@ export default function DescriberPage() {
                     Room {roomCode.toUpperCase()} · Describer
                 </p>
 
+                {isSolo && describerNames.length >= 1 && (
+                    <p className="text-pass-orange/90 text-xs text-center max-w-xs leading-relaxed font-semibold">
+                        Co-op allows one describer. This room already has one — open the guesser link to play, or use the same name to rejoin this device.
+                    </p>
+                )}
+
                 <input
                     type="text"
                     placeholder="Your name"
                     value={playerName}
-                    onChange={e => setPlayerName(e.target.value)}
+                    onChange={e => { setPlayerName(e.target.value); setJoinError(null); }}
                     onKeyDown={e => e.key === 'Enter' && handleJoin()}
                     maxLength={20}
                     className="bg-white/5 border border-white/20 rounded-xl px-5 py-3 text-white text-center font-bold w-full max-w-xs outline-none focus:border-card-gold transition-colors placeholder-gray-600"
                 />
+
+                {joinError && (
+                    <p className="text-red-400 text-xs text-center max-w-xs font-bold">{joinError}</p>
+                )}
 
                 {!isSolo && (
                     <div className="flex gap-3 w-full max-w-xs">
@@ -184,7 +230,11 @@ export default function DescriberPage() {
 
                 <button
                     onClick={handleJoin}
-                    disabled={!playerName.trim() || (!isSolo && !selectedTeam)}
+                    disabled={
+                        !playerName.trim() ||
+                        (!isSolo && !selectedTeam) ||
+                        soloDescriberSlotTaken
+                    }
                     className="w-full max-w-xs bg-card-gold text-dark-bg font-black py-4 rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-40 disabled:scale-100 text-lg uppercase tracking-widest"
                 >
                     Join as Describer
@@ -197,8 +247,18 @@ export default function DescriberPage() {
         <div className="min-h-screen bg-dark-bg flex flex-col items-center justify-center p-8 font-sans gap-8 relative">
 
             {isSolo && (
-                <div className="w-full max-w-sm -mb-2">
+                <div className="w-full max-w-sm -mb-2 flex flex-col gap-3">
                     <CoopTimer endAt={roomData?.coop_timer_end_at} compact />
+                    {!roomData?.current_word && (
+                        <button
+                            type="button"
+                            onClick={handleStartGame}
+                            disabled={startGameBusy}
+                            className="w-full bg-card-gold text-dark-bg font-black py-3.5 rounded-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 text-sm uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(212,175,55,0.25)]"
+                        >
+                            {startGameBusy ? 'Starting…' : 'Start game — draw first card'}
+                        </button>
+                    )}
                 </div>
             )}
 
