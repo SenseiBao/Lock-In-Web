@@ -87,9 +87,12 @@ export const COOP_FREE_SKIPS = 2;
 
 /** Shared co-op countdown (wall-clock end stored in `coop_timer_end_at`) */
 export const COOP_TIMER_INITIAL_SECONDS = 120;
-export const COOP_TIMER_CORRECT_BONUS_SEC = 40;
+export const COOP_TIMER_CORRECT_BONUS_SEC = 25;
 export const COOP_TIMER_BUZZ_PENALTY_SEC = 5;
 export const COOP_HINT_PENALTY_SEC = 3;
+/** Co-op buzz penalty cap: at most MAX_PENALTY_SEC per WINDOW_SEC (rolling) */
+export const COOP_BUZZ_PENALTY_WINDOW_SEC = 10;
+export const COOP_BUZZ_PENALTY_MAX_SEC = 10;
 
 const POWER_UPS = {
     1: { name: "Whiteboard Challenge", desc: "No words! Both Describers draw on their own whiteboards at the same time." },

@@ -9,6 +9,8 @@ import {
     COOP_TIMER_CORRECT_BONUS_SEC,
     COOP_TIMER_BUZZ_PENALTY_SEC,
     COOP_HINT_PENALTY_SEC,
+    COOP_BUZZ_PENALTY_WINDOW_SEC,
+    COOP_BUZZ_PENALTY_MAX_SEC,
 } from '../hooks/useGameLogic';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
@@ -74,6 +76,8 @@ export default function MainGame() {
     const handleDrawRef = useRef(() => {});
     /** Realtime often omits payload.old — dedupe buzzer + co-op timer penalty per unique buzzer_locked_at */
     const lastHostBuzzerAtRef = useRef(null);
+    /** Track when we applied co-op buzz penalties (rolling window) */
+    const coopBuzzPenaltyAppliedAtMsRef = useRef([]);
     const lastCoopHintTickRef = useRef(null);
     const lastCoopStartProcessedRef = useRef(null);
     const pendingCoopStartClearRef = useRef(false);
@@ -89,6 +93,7 @@ export default function MainGame() {
     useEffect(() => {
         lastDescriberCorrectAtRef.current = null;
         lastHostBuzzerAtRef.current = null;
+        coopBuzzPenaltyAppliedAtMsRef.current = [];
         lastCoopHintTickRef.current = null;
         lastCoopStartProcessedRef.current = null;
     }, [roomCode]);
@@ -290,7 +295,16 @@ export default function MainGame() {
                         setBuzzerNotification(buzzer_locked_by);
                         setTimeout(() => setBuzzerNotification(null), 3000);
                         if (payload.new?.game_mode === GAME_MODES.SOLO) {
-                            coopTimerAdjustRef.current.sub(COOP_TIMER_BUZZ_PENALTY_SEC);
+                            // Variant C: cap buzz penalties to a max per rolling window
+                            const now = Date.now();
+                            const windowMs = COOP_BUZZ_PENALTY_WINDOW_SEC * 1000;
+                            const maxEvents = Math.floor(COOP_BUZZ_PENALTY_MAX_SEC / COOP_TIMER_BUZZ_PENALTY_SEC);
+                            const events = (coopBuzzPenaltyAppliedAtMsRef.current || []).filter((t) => now - t < windowMs);
+                            if (events.length < maxEvents) {
+                                coopTimerAdjustRef.current.sub(COOP_TIMER_BUZZ_PENALTY_SEC);
+                                events.push(now);
+                            }
+                            coopBuzzPenaltyAppliedAtMsRef.current = events;
                         }
                     }
                 }
@@ -490,7 +504,7 @@ export default function MainGame() {
                     <p className="text-gray-600 text-[10px] max-w-xs text-center leading-relaxed">
                         {gameMode === GAME_MODES.TEAMS
                             ? 'Two describers (one per team) — teams race to capture the deck.'
-                            : 'Shared 2m timer: correct +40s, buzz −5s, hint −3s. One describer; guessers score together.'}
+                            : 'Shared 2m timer: correct +25s, buzz −5s, hint −3s. One describer; guessers score together.'}
                     </p>
                 </div>
 
