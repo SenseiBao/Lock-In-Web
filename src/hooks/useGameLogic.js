@@ -73,6 +73,11 @@ export const GAME_MODES = {
 /** Co-op mode: skips after this many cost 1 point each (score floored at 0) */
 export const COOP_FREE_SKIPS = 2;
 
+/** Shared co-op countdown (wall-clock end stored in `coop_timer_end_at`) */
+export const COOP_TIMER_INITIAL_SECONDS = 90;
+export const COOP_TIMER_CORRECT_BONUS_SEC = 20;
+export const COOP_TIMER_BUZZ_PENALTY_SEC = 5;
+
 const POWER_UPS = {
     1: { name: "Whiteboard Challenge", desc: "No words! Both Describers draw on their own whiteboards at the same time." },
     2: { name: "Simultaneous Charades", desc: "No words! Both Describers act out the word at the same time. Noises and sounds are allowed." },

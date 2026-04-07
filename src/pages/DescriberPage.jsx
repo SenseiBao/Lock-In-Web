@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { GAME_MODES, COOP_FREE_SKIPS } from '../hooks/useGameLogic';
+import CoopTimer from '../components/CoopTimer';
 
 export default function DescriberPage() {
     const { roomCode } = useParams();
@@ -194,6 +195,12 @@ export default function DescriberPage() {
 
     return (
         <div className="min-h-screen bg-dark-bg flex flex-col items-center justify-center p-8 font-sans gap-8 relative">
+
+            {isSolo && (
+                <div className="w-full max-w-sm -mb-2">
+                    <CoopTimer endAt={roomData?.coop_timer_end_at} compact />
+                </div>
+            )}
 
             {/* Skip vote toast notification */}
             <AnimatePresence>

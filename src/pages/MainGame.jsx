@@ -1,8 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import useSound from 'use-sound';
 import { AnimatePresence, motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
-import { useGameLogic, GAME_MODES } from '../hooks/useGameLogic';
+import {
+    useGameLogic,
+    GAME_MODES,
+    COOP_TIMER_INITIAL_SECONDS,
+    COOP_TIMER_CORRECT_BONUS_SEC,
+    COOP_TIMER_BUZZ_PENALTY_SEC,
+} from '../hooks/useGameLogic';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 // --- COMPONENTS ---
@@ -10,6 +16,7 @@ import Card from '../components/Card';
 import Dice from '../components/Dice';
 import ScoreBoard from '../components/ScoreBoard';
 import Timer from '../components/Timer';
+import CoopTimer from '../components/CoopTimer';
 import MusicPlayer from '../components/MusicPlayer';
 
 // --- SOUND EFFECTS ---
@@ -62,6 +69,8 @@ export default function MainGame() {
     const gameModeRef = useRef(gameMode);
     const currentWordRef = useRef(currentWord);
     const coopCorrectHandlersRef = useRef({ playRandomPointSound: () => {}, recordSoloWin: () => {}, handleDraw: () => {} });
+    const coopTimerAdjustRef = useRef({ add: () => {}, sub: () => {} });
+    const [coopTimerEndAt, setCoopTimerEndAt] = useState(null);
     const [linkCopied, setLinkCopied] = useState(false);
 
     useEffect(() => {
@@ -100,16 +109,49 @@ export default function MainGame() {
         setSkipVotes([]);
     };
 
+    const addCoopTimerSeconds = useCallback((delta) => {
+        setCoopTimerEndAt((prev) => {
+            if (!prev) return new Date(Date.now() + delta * 1000).toISOString();
+            return new Date(new Date(prev).getTime() + delta * 1000).toISOString();
+        });
+    }, []);
+
+    const subtractCoopTimerSeconds = useCallback((delta) => {
+        setCoopTimerEndAt((prev) => {
+            if (!prev) return prev;
+            return new Date(new Date(prev).getTime() - delta * 1000).toISOString();
+        });
+    }, []);
+
+    useEffect(() => {
+        coopTimerAdjustRef.current = {
+            add: (s) => addCoopTimerSeconds(s),
+            sub: (s) => subtractCoopTimerSeconds(s),
+        };
+    }, [addCoopTimerSeconds, subtractCoopTimerSeconds]);
+
+    /** First card in co-op starts the 90s countdown (runs until you change mode or create a new room). */
+    useEffect(() => {
+        if (gameMode !== GAME_MODES.SOLO) return;
+        if (!currentWord) return;
+        setCoopTimerEndAt((prev) => {
+            if (prev !== null) return prev;
+            return new Date(Date.now() + COOP_TIMER_INITIAL_SECONDS * 1000).toISOString();
+        });
+    }, [gameMode, currentWord]);
+
     const changeGameMode = (next) => {
         if (next === gameMode) return;
         resetGame();
         setGameMode(next);
+        setCoopTimerEndAt(null);
     };
 
     const handleWin = (isTeamA) => {
         playRandomPointSound();
         if (gameMode === GAME_MODES.SOLO) {
             recordSoloWin();
+            addCoopTimerSeconds(COOP_TIMER_CORRECT_BONUS_SEC);
         } else {
             recordTeamWin(isTeamA);
         }
@@ -141,8 +183,12 @@ export default function MainGame() {
             solo_score: soloScore,
             solo_words: soloWords,
             solo_free_skips_remaining: soloFreeSkipsRemaining,
+            coop_timer_end_at: gameMode === GAME_MODES.SOLO ? coopTimerEndAt : null,
         });
-        if (!error) setRoomCode(code);
+        if (!error) {
+            setRoomCode(code);
+            setCoopTimerEndAt(null);
+        }
         setIsCreatingRoom(false);
     };
 
@@ -161,6 +207,7 @@ export default function MainGame() {
                 solo_score: soloScore,
                 solo_words: soloWords,
                 solo_free_skips_remaining: soloFreeSkipsRemaining,
+                coop_timer_end_at: gameMode === GAME_MODES.SOLO ? coopTimerEndAt : null,
                 updated_at: new Date().toISOString(),
             };
             // Merge skip_votes clear atomically with the word update so clients
@@ -177,7 +224,7 @@ export default function MainGame() {
             await supabase.from('rooms').update(update).eq('room_code', roomCode);
         };
         sync();
-    }, [roomCode, currentWord, teamAScore, teamBScore, teamAName, teamBName, activePowerUp, gameMode, soloScore, soloWords, soloFreeSkipsRemaining]);
+    }, [roomCode, currentWord, teamAScore, teamBScore, teamAName, teamBName, activePowerUp, gameMode, soloScore, soloWords, soloFreeSkipsRemaining, coopTimerEndAt]);
 
     // Subscribe to buzzer presses from guessers
     useEffect(() => {
@@ -205,6 +252,9 @@ export default function MainGame() {
                 if (buzzer_locked_by && buzzer_locked_at !== prevTime) {
                     setBuzzerNotification(buzzer_locked_by);
                     setTimeout(() => setBuzzerNotification(null), 3000);
+                    if (payload.new?.game_mode === GAME_MODES.SOLO) {
+                        coopTimerAdjustRef.current.sub(COOP_TIMER_BUZZ_PENALTY_SEC);
+                    }
                 }
                 const prevCorrectAt = payload.old?.describer_correct_at;
                 if (
@@ -218,6 +268,7 @@ export default function MainGame() {
                     const h = coopCorrectHandlersRef.current;
                     h.playRandomPointSound();
                     h.recordSoloWin();
+                    coopTimerAdjustRef.current.add(COOP_TIMER_CORRECT_BONUS_SEC);
                     h.handleDraw();
                     pendingDescriberCorrectClearRef.current = true;
                     const label = describer_correct_by ? `✓ ${describer_correct_by} marked correct` : '✓ Describer marked correct';
@@ -392,7 +443,7 @@ export default function MainGame() {
                     <p className="text-gray-600 text-[10px] max-w-xs text-center leading-relaxed">
                         {gameMode === GAME_MODES.TEAMS
                             ? 'Two describers (one per team) — teams race to capture the deck.'
-                            : 'One describer — guessers work together to score as many words as possible.'}
+                            : 'Shared 90s timer: correct +20s, buzz −5s. One describer; guessers score together.'}
                     </p>
                 </div>
 
@@ -512,10 +563,14 @@ export default function MainGame() {
                     <Card word={currentWord} isFlipped={isFlipped} hideWord={hideWord} />
                 </div>
 
-                {/* RIGHT COLUMN: TIMER */}
+                {/* RIGHT COLUMN: TIMER (teams) or shared co-op countdown */}
                 <div className="flex-1 flex justify-start items-center w-full">
                     <div className="w-full max-w-[280px]">
-                        <Timer drawKey={drawKey} />
+                        {gameMode === GAME_MODES.SOLO ? (
+                            <CoopTimer endAt={coopTimerEndAt} />
+                        ) : (
+                            <Timer drawKey={drawKey} />
+                        )}
                     </div>
                 </div>
 

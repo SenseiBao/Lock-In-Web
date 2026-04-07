@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { GAME_MODES } from '../hooks/useGameLogic';
+import CoopTimer from '../components/CoopTimer';
 
 const COOLDOWN_SECONDS = 6;
 const RADIUS = 88;
@@ -199,6 +200,12 @@ export default function GuesserPage() {
     // --- BUZZER SCREEN ---
     return (
         <div className="min-h-screen bg-dark-bg flex flex-col items-center justify-between py-10 px-8 font-sans">
+
+            {roomData?.game_mode === GAME_MODES.SOLO && (
+                <div className="w-full max-w-sm shrink-0 mb-2">
+                    <CoopTimer endAt={roomData?.coop_timer_end_at} compact />
+                </div>
+            )}
 
             {/* Scores */}
             {roomData?.game_mode === GAME_MODES.SOLO ? (
