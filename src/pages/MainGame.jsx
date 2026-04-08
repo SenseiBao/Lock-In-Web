@@ -473,6 +473,27 @@ export default function MainGame() {
                 <h1 className="text-card-gold text-5xl font-black mb-4 tracking-widest drop-shadow-lg">
                     LOCK-IN
                 </h1>
+                <p className="text-gray-500 text-[11px] font-semibold mb-4 flex items-center justify-center gap-3 flex-wrap">
+                    <span>by Bao Pham</span>
+                    <span className="text-gray-700">•</span>
+                    <a
+                        href="https://bao-portfolio-beta.vercel.app/"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-card-gold hover:text-white transition-colors"
+                    >
+                        Portfolio
+                    </a>
+                    <span className="text-gray-700">•</span>
+                    <a
+                        href="https://github.com/SenseiBao/Lock-In-Web"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-card-gold hover:text-white transition-colors"
+                    >
+                        GitHub
+                    </a>
+                </p>
 
                 {/* GAME MODE */}
                 <div className="flex flex-col items-center gap-2 mb-4">

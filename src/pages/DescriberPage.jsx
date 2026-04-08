@@ -25,6 +25,7 @@ export default function DescriberPage() {
     const [showSkipConfirm, setShowSkipConfirm] = useState(false);
     const [skipNotification, setSkipNotification] = useState(null);
     const prevSkipVotesRef = useRef([]);
+    const pollRef = useRef(null);
 
     useEffect(() => {
         document.title = 'Lock-In · Describer';
@@ -33,22 +34,33 @@ export default function DescriberPage() {
 
     useEffect(() => {
         const code = roomCode.toUpperCase();
+        let disposed = false;
 
-        const init = async () => {
+        const fetchLatestRoom = async () => {
             const { data, error } = await supabase
                 .from('rooms')
                 .select('*')
                 .eq('room_code', code)
                 .single();
 
+            if (disposed) return;
             if (error || !data) {
                 setError('Room not found. Check the code and try again.');
                 setLoading(false);
                 return;
             }
 
-            setRoomData(data);
+            // Poll/reconnect safety net: if one realtime event is missed, this keeps everyone in sync.
+            setRoomData((prev) => {
+                if (!prev) return data;
+                // Fast no-op when nothing changed, avoids unnecessary re-renders.
+                return prev.updated_at === data.updated_at && prev.current_word === data.current_word ? prev : data;
+            });
             setLoading(false);
+        };
+
+        const init = async () => {
+            await fetchLatestRoom();
 
             channelRef.current = supabase
                 .channel(`describer-${code}`)
@@ -71,12 +83,22 @@ export default function DescriberPage() {
                         }
                     }
                 })
-                .subscribe();
+                .subscribe((status) => {
+                    // Force a resync if websocket state degrades.
+                    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+                        fetchLatestRoom();
+                    }
+                });
+
+            // Ongoing safety net against occasional dropped realtime updates.
+            pollRef.current = setInterval(fetchLatestRoom, 3000);
         };
 
         init();
         return () => {
+            disposed = true;
             if (channelRef.current) supabase.removeChannel(channelRef.current);
+            if (pollRef.current) clearInterval(pollRef.current);
         };
     }, [roomCode]);
 
